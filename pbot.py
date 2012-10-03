@@ -14,7 +14,6 @@ for c in configs:
 	bot = Bot(c)
 	fd = bot.conn.socket.fileno()
 	fds[fd] = bot
-	bot.join(*c.channels)
 	epoll.register(fd, EPOLLFLAGS)
 
 while True:

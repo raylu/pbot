@@ -1,7 +1,7 @@
 import yaml
 
 class Config:
-	attrs = frozenset(['host', 'port', 'nick', 'user', 'channels'])
+	attrs = frozenset(['host', 'port', 'nick', 'user', 'nickserv', 'channels'])
 
 	def __init__(self, cdict):
 		attrs = set(self.attrs)

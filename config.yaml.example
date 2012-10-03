@@ -3,4 +3,7 @@ bots:
     port: 6667
     nick: pbot
     user: pbot
+    nickserv: null # password to identify to NickServ with, null otherwise
     channels: ['#superseriousstats']
+
+# vim: set et ft=yaml:
