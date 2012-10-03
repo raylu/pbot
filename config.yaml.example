@@ -1,0 +1,6 @@
+bots:
+  - host: irc.freenode.net
+    port: 6667
+    nick: pbot
+    user: pbot
+    channels: ['#superseriousstats']
