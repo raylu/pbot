@@ -1,4 +1,5 @@
 from connection import Connection
+import commands
 
 class NickservStates:
 	UNIDENTIFIED = 0
@@ -43,6 +44,7 @@ class Bot:
 			'376': self.handle_motd, # RPL_ENDOFMOTD
 			'NOTICE': self.handle_notice,
 			'MODE': self.handle_mode,
+			'PRIVMSG': self.handle_privmsg,
 		}
 
 		self.conn = Connection()
@@ -91,3 +93,15 @@ class Bot:
 			if msg.text == '+r':
 				self.nickserv_state = NICKSERV.IDENTIFIED
 				self.__join_channels()
+
+	def handle_privmsg(self, msg):
+		if msg.target != self.config.nick and msg.text[0] == '!' and len(msg.text) > 1:
+			split = msg.text[1:].split(' ', 1)
+			command = split[0]
+			text = ''
+			if len(split) > 1:
+				text = split[1]
+
+			handler = commands.handlers.get(command)
+			if handler:
+				handler(self, msg.target, msg.nick, command, text)
