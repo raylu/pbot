@@ -14,18 +14,18 @@ class Connection:
 		self.socket.send(bytes(line, 'utf-8'))
 
 	def recv(self):
-		data = str(self.socket.recv(4096), 'utf-8')
+		data = self.socket.recv(4096)
 		if self.last_buf is not None:
 			data = self.last_buf + data
 			self.last_buf = None
-		lines = data.split('\r\n')
+		lines = data.split(b'\r\n')
 		for i in range(len(lines) - 1):
-			if self.debug: print('<-', lines[i])
-			yield lines[i]
+			line = str(lines[i], 'utf-8', 'replace')
+			if self.debug: print('<-', line)
+			yield line
 		last = lines[-1]
 		if last:
 			self.last_buf = last
-			return
 
 	def connect(self, host, port, nick, user):
 		self.socket = socket.create_connection((host, port))
