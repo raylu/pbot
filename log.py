@@ -1,6 +1,9 @@
 from datetime import datetime
+import os
+import sys
 
 logfile = open('pbot.log', 'a')
+stdout = os.isatty(sys.stdout.fileno())
 
 def write(text):
 	line = '%s %s' % (datetime.now(), text)
@@ -8,8 +11,14 @@ def write(text):
 		line += '\n\n'
 	else:
 		line += '\n'
-	print(line, end='')
+
+	if stdout:
+		print(line, end='')
 	logfile.write(line)
+
+def flush():
+	global logfile
+	logfile.flush()
 
 def close():
 	global logfile

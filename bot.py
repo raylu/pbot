@@ -69,12 +69,13 @@ class Bot:
 		exc_list = traceback.format_exception(exc_type, exc_value, exc_tb)
 		self.log(line + '\n' + ''.join(exc_list))
 
-		exc_name = exc_type.__name__
 		path, lineno, method, code = traceback.extract_tb(exc_tb)[-1]
 		path = os.path.relpath(path)
-		code = code[:50]
-		self.notice(config.settings['owner'],
-				'%s:%s():%d %s: %s | %s' % (path, method, lineno, exc_name, exc_value, code))
+		exc_name = exc_type.__name__
+		notice = '%s:%s():%d %s: %s' % (path, method, lineno, exc_name, exc_value)
+		if code is not None:
+			notice += ' | ' + code[:50]
+		self.notice(config.settings['owner'], notice)
 
 
 	def log(self, text):

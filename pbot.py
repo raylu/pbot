@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 
 import config
+
+import sys
+if sys.argv[-1] == '-d':
+	from daemon import daemonize
+	daemonize()
+
 import log
 from bot import Bot
 
@@ -24,6 +30,7 @@ try:
 		for fd, flags in results:
 			bot = fds[fd]
 			bot.handle()
+		log.flush()
 except KeyboardInterrupt:
 	for b in fds.values():
 		b.disconnect()
