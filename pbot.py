@@ -24,6 +24,9 @@ try:
 		for fd, flags in results:
 			bot = fds[fd]
 			bot.handle()
+except KeyboardInterrupt:
+	for b in fds.values():
+		b.disconnect()
 finally:
 	epoll.close()
 	log.close()

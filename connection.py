@@ -31,3 +31,11 @@ class Connection:
 		self.socket = socket.create_connection((host, port))
 		self.send('NICK', nick)
 		self.send('USER', user, 'pbot', 'pbot', ':'+user)
+
+	def disconnect(self):
+		if self.socket is None:
+			return
+		self.send('QUIT')
+		self.socket.recv(1024)
+		self.socket.close()
+		self.socket = None

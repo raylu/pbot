@@ -99,6 +99,10 @@ class Bot:
 	def notice(self, target, message):
 		self.conn.send('NOTICE', target, ':'+message)
 
+	def disconnect(self):
+		self.log('disconnecting')
+		self.conn.disconnect()
+
 	def __join_channels(self):
 		self.log('autojoining channels...')
 		if self.config.channels:
