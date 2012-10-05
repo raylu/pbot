@@ -21,3 +21,4 @@ class BotConfig:
 
 __doc = yaml.load(open('config.yaml', 'r'))
 bots = (BotConfig(c) for c in __doc['bots'])
+settings = __doc['settings']

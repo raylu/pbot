@@ -7,4 +7,8 @@ bots:
     channels: ['#superseriousstats']
     autoconnect: true
 
+settings:
+    owner: 'raylu'
+    autoreload: false # automatically reload commands.py when it changes?
+
 # vim: set et ft=yaml:

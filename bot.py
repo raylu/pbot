@@ -1,5 +1,12 @@
 from connection import Connection
+import config
 import commands
+
+import imp
+import os
+
+os.stat_float_times(False)
+commands_mtime = os.stat('commands.py').st_mtime
 
 class NickservStates:
 	UNIDENTIFIED = 0
@@ -63,6 +70,9 @@ class Bot:
 	def say(self, target, message):
 		self.conn.send('PRIVMSG', target, ':'+message)
 
+	def notice(self, target, message):
+		self.conn.send('NOTICE', target, ':'+message)
+
 	def __join_channels(self):
 		if self.config.channels:
 			self.join(*self.config.channels)
@@ -102,6 +112,12 @@ class Bot:
 			if len(split) > 1:
 				text = split[1]
 
+			if config.settings['autoreload']:
+				global commands_mtime
+				new_mtime = os.stat('commands.py').st_mtime
+				if new_mtime > commands_mtime:
+					imp.reload(commands)
+					commands_mtime = new_mtime
 			handler = commands.handlers.get(command)
 			if handler:
 				handler(self, msg.target, msg.nick, command, text)

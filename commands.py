@@ -1,8 +1,20 @@
+import config
+
 import requests
 import oursql
 
 rs = requests.session(headers={'User-Agent': 'pbot'})
 db = oursql.connect(db='eve', user='eve', passwd='eve')
+
+def reload(bot, target, nick, command, text):
+	import sys
+	import imp
+	if config.settings['owner'] == nick:
+		if config.settings['autoreload']:
+			bot.notice(nick, 'not reloading: autoreload is on')
+			return
+		imp.reload(sys.modules[__name__])
+		bot.notice(nick, 'reloaded!')
 
 def price_check(bot, target, nick, command, text):
 	def get_prices(typeid, system=None, region=None):
@@ -59,4 +71,5 @@ def price_check(bot, target, nick, command, text):
 
 handlers = {
 	'pc': price_check,
+	'reload': reload,
 }
