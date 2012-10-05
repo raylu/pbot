@@ -1,6 +1,6 @@
 import socket
 
-socket.setdefaulttimeout(180)
+socket.setdefaulttimeout(10)
 
 class Connection:
 	def __init__(self):
@@ -29,6 +29,7 @@ class Connection:
 
 	def connect(self, host, port, nick, user):
 		self.socket = socket.create_connection((host, port))
+		self.socket.setblocking(False)
 		self.send('NICK', nick)
 		self.send('USER', user, 'pbot', 'pbot', ':'+user)
 
@@ -36,6 +37,5 @@ class Connection:
 		if self.socket is None:
 			return
 		self.send('QUIT')
-		self.socket.recv(1024)
 		self.socket.close()
 		self.socket = None
