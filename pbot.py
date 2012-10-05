@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import config
+import log
 from bot import Bot
 
 import select
@@ -17,8 +18,12 @@ for c in config.bots:
 	fds[fd] = bot
 	epoll.register(fd, EPOLLFLAGS)
 
-while True:
-	results = epoll.poll()
-	for fd, flags in results:
-		bot = fds[fd]
-		bot.handle()
+try:
+	while True:
+		results = epoll.poll()
+		for fd, flags in results:
+			bot = fds[fd]
+			bot.handle()
+finally:
+	epoll.close()
+	log.close()

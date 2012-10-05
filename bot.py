@@ -1,8 +1,11 @@
 from connection import Connection
 import config
+import log
 import commands
 
 import imp
+import sys
+import traceback
 import os
 
 os.stat_float_times(False)
@@ -54,15 +57,38 @@ class Bot:
 			'PRIVMSG': self.handle_privmsg,
 		}
 
+		log.write('connecting to %s:%d...' % (config.host, config.port))
 		self.conn = Connection()
 		self.conn.connect(config.host, config.port, config.nick, config.user)
+
+	def __str__(self):
+		return '<Bot: %s/%s>' % (config.host, config.nick)
+
+	def exception(self, line):
+		exc_type, exc_value, exc_tb = sys.exc_info()
+		exc_list = traceback.format_exception(exc_type, exc_value, exc_tb)
+		self.log(line + '\n' + ''.join(exc_list))
+
+		exc_name = exc_type.__name__
+		path, lineno, method, code = traceback.extract_tb(exc_tb)[-1]
+		path = os.path.relpath(path)
+		code = code[:50]
+		self.notice(config.settings['owner'],
+				'%s:%s():%d %s: %s | %s' % (path, method, lineno, exc_name, exc_value, code))
+
+
+	def log(self, text):
+		log.write('%s/%s: %s' % (self.config.host, self.config.nick, text))
 
 	def handle(self):
 		for line in self.conn.recv():
 			msg = ServerMessage(line)
 			handler = self.handlers.get(msg.command)
 			if handler:
-				handler(msg)
+				try:
+					handler(msg)
+				except:
+					self.exception(line)
 
 	def join(self, *channels):
 		self.conn.send('JOIN', *channels)
@@ -74,6 +100,7 @@ class Bot:
 		self.conn.send('NOTICE', target, ':'+message)
 
 	def __join_channels(self):
+		self.log('autojoining channels...')
 		if self.config.channels:
 			self.join(*self.config.channels)
 
@@ -82,6 +109,7 @@ class Bot:
 
 	def handle_motd(self, msg):
 		self.registered = True
+		self.log('server accepted host/nick/user')
 		if self.config.nickserv is None:
 			self.nickserv_state = NICKSERV.IDENTIFIED
 			self.__join_channels()
@@ -102,6 +130,7 @@ class Bot:
 		if msg.target == self.config.nick:
 			if msg.text == '+r':
 				self.nickserv_state = NICKSERV.IDENTIFIED
+				self.log('nickserv accepted identification')
 				self.__join_channels()
 
 	def handle_privmsg(self, msg):
