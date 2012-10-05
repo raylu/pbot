@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from config import Config, get_configs
+import config
 from bot import Bot
 
 import select
@@ -8,9 +8,10 @@ import select
 epoll = select.epoll()
 EPOLLFLAGS = select.EPOLLIN | select.EPOLLERR | select.EPOLLHUP
 
-configs = get_configs()
 fds = {}
-for c in configs:
+for c in config.bots:
+	if not c.autoconnect:
+		continue
 	bot = Bot(c)
 	fd = bot.conn.socket.fileno()
 	fds[fd] = bot

@@ -5,5 +5,6 @@ bots:
     user: pbot
     nickserv: null # password to identify to NickServ with, null otherwise
     channels: ['#superseriousstats']
+    autoconnect: true
 
 # vim: set et ft=yaml:
