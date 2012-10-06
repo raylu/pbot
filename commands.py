@@ -4,7 +4,7 @@ import requests
 import oursql
 
 rs = requests.session(headers={'User-Agent': 'pbot'})
-db = oursql.connect(db='eve', user='eve', passwd='eve')
+db = oursql.connect(db='eve', user='eve', passwd='eve', autoping=True)
 
 def reload(bot, target, nick, command, text):
 	import sys
