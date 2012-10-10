@@ -4,7 +4,11 @@ import requests
 import oursql
 
 rs = requests.session(headers={'User-Agent': 'pbot'})
-db = oursql.connect(db='eve', user='eve', passwd='eve', autoping=True)
+db = None
+def __connect_db():
+	global db
+	db = oursql.connect(db='eve', user='eve', passwd='eve')
+__connect_db()
 
 def reload(bot, target, nick, command, text):
 	import sys
@@ -39,24 +43,31 @@ def price_check(bot, target, nick, command, text):
 		ask = float(sell_min.childNodes[0].data)
 
 		return bid, ask
+	def item_info(item_name):
+		curs = db.cursor()
+		try:
+			curs.execute('''
+				SELECT typeID, typeName
+				FROM invTypes
+				WHERE typeName LIKE ?;
+			''', (item_name,))
+			result = curs.fetchone()
+			curs.close()
+			if result is None:
+				bot.say(target, 'Item not found')
+				return
+			typeid = result[0]
+			item_name = result[1]
+			return typeid, item_name
+		except oursql.OperationalError as e:
+			if e.errno == oursql.errnos['CR_SERVER_GONE_ERROR']:
+				curs.close()
+				db.close()
+				__connect_db()
+				return item_info(item_name)
+			raise
 
-	curs = db.cursor()
-	try:
-		item_name = text
-		curs.execute('''
-			SELECT typeID, typeName
-			FROM invTypes
-			WHERE typeName LIKE ?;
-		''', (item_name,))
-		result = curs.fetchone()
-		if result is None:
-			bot.say(target, 'Item not found')
-			return
-		typeid = result[0]
-		item_name = result[1]
-	finally:
-		curs.close()
-
+	typeid, item_name = item_info(text)
 	jita_system = 30000142
 	detorid_region = 10000005
 	jita_prices = get_prices(typeid, system=jita_system)
