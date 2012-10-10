@@ -33,7 +33,7 @@ class ServerMessage:
 		self.command = split[0]
 		self.target = split[1]
 		self.text = None
-		if len(split) > 2:
+		if len(split) > 2 and split[2]:
 			self.text = split[2]
 			if self.text[0] == ':':
 				self.text = self.text[1:]
