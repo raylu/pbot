@@ -54,7 +54,6 @@ def price_check(bot, target, nick, command, text):
 			result = curs.fetchone()
 			curs.close()
 			if result is None:
-				bot.say(target, 'Item not found')
 				return
 			typeid = result[0]
 			item_name = result[1]
@@ -67,7 +66,11 @@ def price_check(bot, target, nick, command, text):
 				return item_info(item_name)
 			raise
 
-	typeid, item_name = item_info(text)
+	try:
+		typeid, item_name = item_info(text)
+	except TypeError:
+		bot.say(target, 'Item not found')
+		return
 	jita_system = 30000142
 	detorid_region = 10000005
 	jita_prices = get_prices(typeid, system=jita_system)
