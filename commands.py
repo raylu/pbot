@@ -60,8 +60,6 @@ def price_check(bot, target, nick, command, text):
 			return typeid, item_name
 		except oursql.OperationalError as e:
 			if e.errno == oursql.errnos['CR_SERVER_GONE_ERROR']:
-				curs.close()
-				db.close()
 				__connect_db()
 				return item_info(item_name)
 			raise
