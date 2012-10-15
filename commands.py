@@ -1,5 +1,7 @@
 import config
 
+import re
+
 import requests
 import oursql
 
@@ -85,3 +87,28 @@ handlers = {
 	'pc': price_check,
 	'reload': reload,
 }
+
+youtube_re = re.compile('((youtube\.com\/watch\?v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
+def youtube(bot, msg):
+	match = youtube_re.search(msg.text)
+	if match is None:
+		return
+	vid = match.group(4)
+	url = 'http://gdata.youtube.com/feeds/api/videos/' + vid
+	params = {
+		'v': 2,
+		'strict': True,
+		'alt': 'json',
+	}
+	response = rs.get(url, params=params).json
+	if response is None:
+		return
+	entry = response['entry']
+	title = entry['title']['$t']
+	seconds = int(entry['media$group']['yt$duration']['seconds'])
+	minutes, seconds = divmod(seconds, 60)
+	hours, minutes = divmod(minutes, 60)
+	duration = '%02d:%02d' % (minutes, seconds)
+	if hours > 0:
+		duration = '%s:%s' % (hours, duration)
+	bot.say(msg.target, "%s's video: %s, %s" % (msg.nick, title, duration))

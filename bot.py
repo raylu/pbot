@@ -139,19 +139,22 @@ class Bot:
 				self.__join_channels()
 
 	def handle_privmsg(self, msg):
-		if msg.target != self.config.nick and msg.text[0] == '!' and len(msg.text) > 1:
-			split = msg.text[1:].split(' ', 1)
-			command = split[0]
-			text = ''
-			if len(split) > 1:
-				text = split[1]
+		if msg.target != self.config.nick:
+			if msg.text[0] == '!' and len(msg.text) > 1:
+				split = msg.text[1:].split(' ', 1)
+				command = split[0]
+				text = ''
+				if len(split) > 1:
+					text = split[1]
 
-			if config.settings['autoreload']:
-				global commands_mtime
-				new_mtime = os.stat('commands.py').st_mtime
-				if new_mtime > commands_mtime:
-					imp.reload(commands)
-					commands_mtime = new_mtime
-			handler = commands.handlers.get(command)
-			if handler:
-				handler(self, msg.target, msg.nick, command, text)
+				if config.settings['autoreload']:
+					global commands_mtime
+					new_mtime = os.stat('commands.py').st_mtime
+					if new_mtime > commands_mtime:
+						imp.reload(commands)
+						commands_mtime = new_mtime
+				handler = commands.handlers.get(command)
+				if handler:
+					handler(self, msg.target, msg.nick, command, text)
+			else:
+				commands.youtube(self, msg)
