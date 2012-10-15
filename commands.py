@@ -83,9 +83,42 @@ def price_check(bot, target, nick, command, text):
 		detorid = 'bid {:,d} ask {:,d}'.format(int(detorid_prices[0]), int(detorid_prices[1]))
 	bot.say(target, '%s - Jita: %s ; Detorid: %s' % (item_name, jita, detorid))
 
+entity_re = re.compile(r'&(#?)(x?)(\w+);')
+def calc(bot, target, nick, command, text):
+	import codecs
+	import html.entities
+	def substitute_entity(match):
+		ent = match.group(3)
+		if match.group(1) == "#":
+			if match.group(2) == '':
+				return chr(int(ent))
+			elif match.group(2) == 'x':
+				return chr(int('0x'+ent, 16))
+		else:
+			cp = html.entities.name2codepoint.get(ent)
+			if cp:
+				return chr(cp)
+			return match.group()
+	def decode_htmlentities(string):
+		return entity_re.subn(substitute_entity, string)[0]
+
+	if not text:
+		return
+	response = rs.get('http://www.google.com/ig/calculator', params={'hl': 'en', 'q': text}).text
+	match = re.match('{lhs: "(.*)",rhs: "(.*)",error: "(.*)",icc: (true|false)}', response)
+	if match is None or match.group(3) != '':
+		say(userFrom + ': Error calculating.')
+		return
+	output = "%s = %s" % (match.group(1), match.group(2))
+	output = codecs.getdecoder('unicode_escape')(output)[0]
+	output = re.subn('<sup>(.*)</sup>', r'^(\1)', output)[0]
+	output = decode_htmlentities(output)
+	bot.say(target, '%s: %s' % (nick, output))
+
 handlers = {
 	'pc': price_check,
 	'reload': reload,
+	'calc': calc,
 }
 
 youtube_re = re.compile('((youtube\.com\/watch\?v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
