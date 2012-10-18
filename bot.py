@@ -52,6 +52,7 @@ class Bot:
 		self.handlers = {
 			'PING': self.handle_ping,
 			'376': self.handle_motd, # RPL_ENDOFMOTD
+			'422': self.handle_motd, # ERR_NOMOTD
 			'NOTICE': self.handle_notice,
 			'MODE': self.handle_mode,
 			'PRIVMSG': self.handle_privmsg,
@@ -91,8 +92,8 @@ class Bot:
 				except:
 					self.exception(line)
 
-	def join(self, *channels):
-		self.conn.send('JOIN', *channels)
+	def join(self, channel):
+		self.conn.send('JOIN', channel)
 
 	def say(self, target, message):
 		self.conn.send('PRIVMSG', target, ':'+message)
@@ -106,8 +107,8 @@ class Bot:
 
 	def __join_channels(self):
 		self.log('autojoining channels...')
-		if self.config.channels:
-			self.join(*self.config.channels)
+		for c in self.config.channels:
+			self.join(c)
 
 	def handle_ping(self, msg):
 		self.conn.send('PONG', msg.target)
