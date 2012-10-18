@@ -101,6 +101,9 @@ class Bot:
 	def notice(self, target, message):
 		self.conn.send('NOTICE', target, ':'+message)
 
+	def ctcp_reply(self, target, *args):
+		self.notice(target, '%c%s%c' % (1, ' '.join(args), 1))
+
 	def disconnect(self):
 		self.log('disconnecting')
 		self.conn.disconnect()
@@ -140,6 +143,10 @@ class Bot:
 				self.__join_channels()
 
 	def handle_privmsg(self, msg):
+		if msg.text[0] == chr(1) and len(msg.text) > 2 and msg.text[-1] == chr(1):
+			self.handle_ctcp(msg)
+			return
+
 		if msg.target != self.config.nick:
 			if msg.text[0] == '!' and len(msg.text) > 1:
 				split = msg.text[1:].split(' ', 1)
@@ -159,3 +166,10 @@ class Bot:
 					handler(self, msg.target, msg.nick, command, text)
 			else:
 				commands.youtube(self, msg)
+
+	def handle_ctcp(self, msg):
+		if msg.target == self.config.nick:
+			split = msg.text[1:-1].split(' ', 1)
+			command = split[0]
+			if command == 'VERSION':
+				self.ctcp_reply(msg.nick, 'VERSION', 'pbot https://github.com/raylu/pbot')
