@@ -10,10 +10,20 @@ if sys.argv[-1] == '-d':
 import log
 from bot import Bot
 
+import errno
 import select
+import signal
 
 epoll = select.epoll()
 EPOLLFLAGS = select.EPOLLIN | select.EPOLLERR | select.EPOLLHUP
+
+keep_going = True
+def quit(signum, frame):
+	global keep_going
+	keep_going = False
+for s in [signal.SIGTERM, signal.SIGINT]:
+	signal.signal(s, quit)
+	signal.siginterrupt(s, False)
 
 fds = {}
 for c in config.bots:
@@ -25,13 +35,18 @@ for c in config.bots:
 	epoll.register(fd, EPOLLFLAGS)
 
 try:
-	while True:
-		results = epoll.poll()
+	while keep_going:
+		try:
+			results = epoll.poll()
+		except IOError as e:
+			if e.errno == errno.EINTR and not keep_going:
+				break
+			else:
+				raise
 		for fd, flags in results:
 			bot = fds[fd]
 			bot.handle()
 		log.flush()
-except KeyboardInterrupt:
 	for b in fds.values():
 		b.disconnect()
 finally:
