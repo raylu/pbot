@@ -107,7 +107,7 @@ def calc(bot, target, nick, command, text):
 	response = rs.get('http://www.google.com/ig/calculator', params={'hl': 'en', 'q': text}).text
 	match = re.match('{lhs: "(.*)",rhs: "(.*)",error: "(.*)",icc: (true|false)}', response)
 	if match is None or match.group(3) != '':
-		say(userFrom + ': Error calculating.')
+		bot.say(target, nick + ': Error calculating.')
 		return
 	output = "%s = %s" % (match.group(1), match.group(2))
 	output = codecs.getdecoder('unicode_escape')(output)[0]
