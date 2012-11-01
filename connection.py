@@ -1,3 +1,4 @@
+import errno
 import socket
 
 socket.setdefaulttimeout(10)
@@ -11,7 +12,7 @@ class Connection:
 	def send(self, *data):
 		line = ' '.join(data) + '\r\n'
 		if self.debug: print('->', line, end='')
-		self.socket.send(bytes(line, 'utf-8'))
+		self.socket.sendall(bytes(line, 'utf-8'))
 
 	def recv(self):
 		data = self.socket.recv(4096)
@@ -27,15 +28,23 @@ class Connection:
 		if last:
 			self.last_buf = last
 
-	def connect(self, host, port, nick, user):
-		self.socket = socket.create_connection((host, port))
+	def connect(self, host, port):
+		self.socket = socket.socket()
 		self.socket.setblocking(False)
-		self.send('NICK', nick)
-		self.send('USER', user, 'pbot', 'pbot', ':'+user)
+		error = None
+		try:
+			self.socket.connect_ex((host, port))
+		except socket.error as e:
+			error = e
+		return self.socket.fileno(), error
 
 	def disconnect(self):
 		if self.socket is None:
 			return
-		self.send('QUIT')
+		try:
+			self.send('QUIT')
+		except socket.error as e:
+			if e.errno != errno.EPIPE:
+				raise
 		self.socket.close()
 		self.socket = None

@@ -4,18 +4,22 @@ import log
 import commands
 
 import imp
-import sys
-import traceback
 import os
+import sys
+import time
+import traceback
 
 os.stat_float_times(False)
 commands_mtime = os.stat('commands.py').st_mtime
 
-class NickservStates:
-	UNIDENTIFIED = 0
-	IDENTIFYING = 1
-	IDENTIFIED = 2
-NICKSERV = NickservStates()
+class BotStates:
+	DISCONNECTED = 0
+	CONNECTING = 1
+	REGISTERING = 2 # server has accepted our host/nick/user
+	UNIDENTIFIED = 3
+	IDENTIFYING = 4
+	IDENTIFIED = 5
+STATE = BotStates()
 
 class ServerMessage:
 	''' nick, command, target, text '''
@@ -46,8 +50,10 @@ class ServerMessage:
 class Bot:
 	def __init__(self, config):
 		self.config = config
-		self.nickserv_state = NICKSERV.UNIDENTIFIED
-		self.registered = False # has the server accepted our host/nick/user?
+		self.state = STATE.DISCONNECTED
+		self.conn = None
+		self.last_recv = None
+		self.awaiting_pong = False
 
 		self.handlers = {
 			'PING': self.handle_ping,
@@ -57,10 +63,6 @@ class Bot:
 			'MODE': self.handle_mode,
 			'PRIVMSG': self.handle_privmsg,
 		}
-
-		log.write('connecting to %s:%d...' % (config.host, config.port))
-		self.conn = Connection()
-		self.conn.connect(config.host, config.port, config.nick, config.user)
 
 	def __str__(self):
 		return '<Bot: %s/%s>' % (config.host, config.nick)
@@ -78,9 +80,24 @@ class Bot:
 			notice += ' | ' + code[:50]
 		self.notice(config.settings['owner'], notice)
 
-
 	def log(self, text):
 		log.write('%s/%s: %s' % (self.config.host, self.config.nick, text))
+
+	def connect(self):
+		host = self.config.host
+		port = self.config.port
+		self.log('connecting to port %d...' % port)
+		self.last_recv = time.time()
+		self.awaiting_pong = False
+		if not self.conn:
+			self.conn = Connection()
+		fd, error = self.conn.connect(host, port)
+		if error:
+			self.log(error)
+			self.state = STATE.DISCONNECTED
+		else:
+			self.state = STATE.CONNECTING
+		return fd
 
 	def handle(self):
 		for line in self.conn.recv():
@@ -91,6 +108,22 @@ class Bot:
 					handler(msg)
 				except:
 					self.exception(line)
+		self.last_recv = time.time()
+
+	def check_disconnect(self, ts):
+		time_since = ts - self.last_recv
+		ping_timeout_wait = config.PING_INTERVAL + config.PING_TIMEOUT
+		if time_since > ping_timeout_wait:
+			self.log('no reply from server in %ds' % ping_timeout_wait)
+			self.disconnect()
+			return True
+		elif time_since > config.PING_INTERVAL and not self.awaiting_pong and self.state == STATE.IDENTIFIED:
+			# don't let the server's reply to ping reset last_recv unless we're fully
+			# identified lest we get stuck forever in a partially-connected state
+			self.ping()
+
+	def nick(self, new_nick):
+		self.conn.send('nick', new_nick)
 
 	def join(self, channel):
 		self.conn.send('JOIN', channel)
@@ -104,9 +137,14 @@ class Bot:
 	def ctcp_reply(self, target, *args):
 		self.notice(target, '%c%s%c' % (1, ' '.join(args), 1))
 
+	def ping(self):
+		self.conn.send('PING', 'pbot')
+		self.awaiting_pong = True
+
 	def disconnect(self):
 		self.log('disconnecting')
 		self.conn.disconnect()
+		self.state = STATE.DISCONNECTED
 
 	def __join_channels(self):
 		self.log('autojoining channels...')
@@ -117,28 +155,28 @@ class Bot:
 		self.conn.send('PONG', msg.target)
 
 	def handle_motd(self, msg):
-		self.registered = True
-		self.log('server accepted host/nick/user')
+		self.state = STATE.UNIDENTIFIED
 		if self.config.nickserv is None:
-			self.nickserv_state = NICKSERV.IDENTIFIED
+			self.state = STATE.IDENTIFIED
 			self.__join_channels()
 
 	def handle_notice(self, msg):
-		if not self.registered: # AUTH :*** Looking up your hostname...
-			return
-
-		if self.nickserv_state < NICKSERV.IDENTIFYING:
+		if self.state < STATE.REGISTERING:
+			self.nick(self.config.nick)
+			self.conn.send('USER', self.config.user, 'pbot', 'pbot', ':'+self.config.user)
+			self.state = STATE.REGISTERING
+		elif self.state == STATE.UNIDENTIFIED:
 			if self.config.nickserv is None:
-				self.nickserv_state = NICKSERV.IDENTIFIED
+				self.state = STATE.IDENTIFIED
 				self.__join_channels()
-			elif msg.nick.upper() == 'NICKSERV':
+			elif msg.nick and msg.nick.upper() == 'NICKSERV':
 				self.say(msg.nick, 'IDENTIFY ' + self.config.nickserv)
-				self.nickserv_state = NICKSERV.IDENTIFYING
+				self.state = STATE.IDENTIFYING
 
 	def handle_mode(self, msg):
 		if msg.target == self.config.nick:
 			if msg.text == '+r':
-				self.nickserv_state = NICKSERV.IDENTIFIED
+				self.state = STATE.IDENTIFIED
 				self.log('nickserv accepted identification')
 				self.__join_channels()
 
