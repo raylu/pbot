@@ -45,32 +45,65 @@ def price_check(bot, target, nick, command, text):
 		ask = float(sell_min.childNodes[0].data)
 
 		return bid, ask
+	def __item_info(curs, query):
+		curs.execute(
+				'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
+				(query,)
+				)
+		results = curs.fetchmany(3)
+		if len(results) == 1:
+			return results[0]
+		if len(results) == 2 and \
+				results[0][1].endswith('Blueprint') ^ results[1][1].endswith('Blueprint'):
+			# an item and its blueprint; show the item
+			if results[0][1].endswith('Blueprint'):
+				return results[1]
+			else:
+				return results[0]
+		if len(results) >= 2:
+			return results
 	def item_info(item_name):
-		curs = db.cursor()
-		try:
-			curs.execute('''
-				SELECT typeID, typeName
-				FROM invTypes
-				WHERE typeName LIKE ?;
-			''', (item_name,))
-			result = curs.fetchone()
-			curs.close()
-			if result is None:
-				return
-			typeid = result[0]
-			item_name = result[1]
-			return typeid, item_name
-		except oursql.OperationalError as e:
-			if e.errno == oursql.errnos['CR_SERVER_GONE_ERROR']:
-				__connect_db()
-				return item_info(item_name)
-			raise
+		with db.cursor() as curs:
+			try:
+				# exact match
+				curs.execute(
+						'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
+						(item_name,)
+						)
+				result = curs.fetchone()
+				if result:
+					return result
 
-	try:
-		typeid, item_name = item_info(text)
-	except TypeError:
-		bot.say(target, 'Item not found')
+				# start of string match
+				results = __item_info(curs, item_name + '%')
+				if isinstance(results, tuple):
+					return results
+				if results:
+					names = map(lambda r: r[1], results)
+					bot.say(target, 'Found items: ' + ', '.join(names))
+					return
+
+				# substring match
+				results = __item_info(curs, '%' + item_name + '%')
+				if isinstance(results, tuple):
+					return results
+				if results:
+					names = map(lambda r: r[1], results)
+					bot.say(target, 'Found items: ' + ', '.join(names))
+					return
+				bot.say(target, 'Item not found')
+			except oursql.OperationalError as e:
+				if e.errno == oursql.errnos['CR_SERVER_GONE_ERROR']:
+					__connect_db()
+					return item_info(item_name)
+				raise
+
+	if text.lower() == 'plex':
+		text = "30 Day Pilot's License Extension (PLEX)"
+	result = item_info(text)
+	if not result:
 		return
+	typeid, item_name = result
 	jita_system = 30000142
 	detorid_region = 10000005
 	jita_prices = get_prices(typeid, system=jita_system)
