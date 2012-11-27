@@ -6,11 +6,7 @@ import requests
 import oursql
 
 rs = requests.session(headers={'User-Agent': 'pbot'})
-db = None
-def __connect_db():
-	global db
-	db = oursql.connect(db='eve', user='eve', passwd='eve')
-__connect_db()
+db = oursql.connect(db='eve', user='eve', passwd='eve', autoreconnect=True)
 
 def reload(bot, target, nick, command, text):
 	import sys
@@ -64,39 +60,33 @@ def price_check(bot, target, nick, command, text):
 			return results
 	def item_info(item_name):
 		with db.cursor() as curs:
-			try:
-				# exact match
-				curs.execute(
-						'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
-						(item_name,)
-						)
-				result = curs.fetchone()
-				if result:
-					return result
+			# exact match
+			curs.execute(
+					'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
+					(item_name,)
+					)
+			result = curs.fetchone()
+			if result:
+				return result
 
-				# start of string match
-				results = __item_info(curs, item_name + '%')
-				if isinstance(results, tuple):
-					return results
-				if results:
-					names = map(lambda r: r[1], results)
-					bot.say(target, 'Found items: ' + ', '.join(names))
-					return
+			# start of string match
+			results = __item_info(curs, item_name + '%')
+			if isinstance(results, tuple):
+				return results
+			if results:
+				names = map(lambda r: r[1], results)
+				bot.say(target, 'Found items: ' + ', '.join(names))
+				return
 
-				# substring match
-				results = __item_info(curs, '%' + item_name + '%')
-				if isinstance(results, tuple):
-					return results
-				if results:
-					names = map(lambda r: r[1], results)
-					bot.say(target, 'Found items: ' + ', '.join(names))
-					return
-				bot.say(target, 'Item not found')
-			except oursql.OperationalError as e:
-				if e.errno == oursql.errnos['CR_SERVER_GONE_ERROR']:
-					__connect_db()
-					return item_info(item_name)
-				raise
+			# substring match
+			results = __item_info(curs, '%' + item_name + '%')
+			if isinstance(results, tuple):
+				return results
+			if results:
+				names = map(lambda r: r[1], results)
+				bot.say(target, 'Found items: ' + ', '.join(names))
+				return
+			bot.say(target, 'Item not found')
 
 	if text.lower() == 'plex':
 		text = "30 Day Pilot's License Extension (PLEX)"
