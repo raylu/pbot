@@ -95,11 +95,15 @@ def price_check(bot, target, nick, command, text):
 		return
 	typeid, item_name = result
 	jita_system = 30000142
+	amarr_system = 30002187
 	jita_prices = get_prices(typeid, system=jita_system)
-	jita = 'n/a'
+	amarr_prices = get_prices(typeid, system=amarr_system)
+	jita = amarr = 'n/a'
 	if jita_prices is not None:
 		jita = 'bid {:,d} ask {:,d}'.format(int(jita_prices[0]), int(jita_prices[1]))
-	bot.say(target, '%s - Jita: %s' % (item_name, jita))
+	if amarr_prices is not None:
+		amarr = 'bid {:,d} ask {:,d}'.format(int(amarr_prices[0]), int(amarr_prices[1]))
+	bot.say(target, '%s - Jita: %s ; Amarr: %s' % (item_name, jita, amarr))
 
 entity_re = re.compile(r'&(#?)(x?)(\w+);')
 def calc(bot, target, nick, command, text):
