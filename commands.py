@@ -105,6 +105,23 @@ def price_check(bot, target, nick, command, text):
 		amarr = 'bid {:,d} ask {:,d}'.format(int(amarr_prices[0]), int(amarr_prices[1]))
 	bot.say(target, '%s - Jita: %s ; Amarr: %s' % (item_name, jita, amarr))
 
+def jumps(bot, target, nick, command, text):
+	split = text.split()
+	if len(split) != 2:
+		bot.say('usage: %s [from] [to]' % command)
+		return
+	r = rs.get('http://api.eve-central.com/api/route/from/%s/to/%s' % (split[0].capitalize(), split[1].capitalize()))
+	jumps = r.json
+	jumps_split = []
+	for j in jumps:
+		j_str = j['to']['name']
+		from_sec = j['from']['security']
+		to_sec = j['to']['security']
+		if from_sec != to_sec:
+			j_str += ' (%0.1g)' % to_sec
+		jumps_split.append(j_str)
+	bot.say(target, '%d jumps: %s' % (len(jumps), ', '.join(jumps_split)))
+
 entity_re = re.compile(r'&(#?)(x?)(\w+);')
 def calc(bot, target, nick, command, text):
 	import codecs
@@ -139,6 +156,7 @@ def calc(bot, target, nick, command, text):
 
 handlers = {
 	'pc': price_check,
+	'jumps': jumps,
 	'reload': reload,
 	'calc': calc,
 }
