@@ -149,6 +149,7 @@ def calc(bot, target, nick, command, text):
 		bot.say(target, nick + ': Error calculating.')
 		return
 	output = "%s = %s" % (match.group(1), match.group(2))
+	output = output.replace('\u00a0', ' ') # replace nbsp with space
 	output = codecs.getdecoder('unicode_escape')(output)[0]
 	output = re.subn('<sup>(.*)</sup>', r'^(\1)', output)[0]
 	output = decode_htmlentities(output)
