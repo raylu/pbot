@@ -40,7 +40,11 @@ def price_check(bot, target, nick, command, text):
 		sell_min = sell.getElementsByTagName('min')[0]
 		ask = float(sell_min.childNodes[0].data)
 
-		return bid, ask
+		all_orders = xml.getElementsByTagName('all')[0]
+		all_volume = all_orders.getElementsByTagName('volume')[0]
+		volume = int(all_volume.childNodes[0].data)
+
+		return bid, ask, volume
 	def __item_info(curs, query):
 		curs.execute(
 				'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
@@ -87,6 +91,13 @@ def price_check(bot, target, nick, command, text):
 				bot.say(target, 'Found items: ' + ', '.join(names))
 				return
 			bot.say(target, 'Item not found')
+	def format_prices(prices):
+		if prices is None:
+			return 'n/a'
+		if prices[1] < 1000.0:
+			return 'bid {0:g} ask {1:g} vol {2:,d}'.format(*prices)
+		prices = map(int, prices)
+		return 'bid {0:,d} ask {1:,d} vol {2:,d}'.format(*prices)
 
 	if text.lower() == 'plex':
 		text = "30 Day Pilot's License Extension (PLEX)"
@@ -98,11 +109,8 @@ def price_check(bot, target, nick, command, text):
 	amarr_system = 30002187
 	jita_prices = get_prices(typeid, system=jita_system)
 	amarr_prices = get_prices(typeid, system=amarr_system)
-	jita = amarr = 'n/a'
-	if jita_prices is not None:
-		jita = 'bid {:,d} ask {:,d}'.format(int(jita_prices[0]), int(jita_prices[1]))
-	if amarr_prices is not None:
-		amarr = 'bid {:,d} ask {:,d}'.format(int(amarr_prices[0]), int(amarr_prices[1]))
+	jita = format_prices(jita_prices)
+	amarr = format_prices(amarr_prices)
 	bot.say(target, '%s - Jita: %s ; Amarr: %s' % (item_name, jita, amarr))
 
 def jumps(bot, target, nick, command, text):
