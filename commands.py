@@ -120,7 +120,7 @@ def jumps(bot, target, nick, command, text):
 		bot.say('usage: %s [from] [to]' % command)
 		return
 	r = rs.get('http://api.eve-central.com/api/route/from/%s/to/%s' % (split[0].capitalize(), split[1].capitalize()))
-	jumps = r.json
+	jumps = r.json()
 	jumps_split = []
 	for j in jumps:
 		j_str = j['to']['name']
@@ -183,7 +183,7 @@ def youtube(bot, msg):
 		'strict': True,
 		'alt': 'json',
 	}
-	response = rs.get(url, params=params).json
+	response = rs.get(url, params=params).json()
 	if response is None:
 		return
 	entry = response['entry']
