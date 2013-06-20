@@ -171,7 +171,7 @@ handlers = {
 	'calc': calc,
 }
 
-youtube_re = re.compile('((youtube\.com\/watch\?v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
+youtube_re = re.compile('((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
 def youtube(bot, msg):
 	match = youtube_re.search(msg.text)
 	if match is None:
@@ -183,10 +183,11 @@ def youtube(bot, msg):
 		'strict': True,
 		'alt': 'json',
 	}
-	response = rs.get(url, params=params).json()
-	if response is None:
+	response = rs.get(url, params=params)
+	if response.status_code == 400:
+		bot.say(msg.target, "%s: invalid id" % msg.nick)
 		return
-	entry = response['entry']
+	entry = response.json()['entry']
 	title = entry['title']['$t']
 	seconds = int(entry['media$group']['yt$duration']['seconds'])
 	minutes, seconds = divmod(seconds, 60)
