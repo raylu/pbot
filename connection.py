@@ -34,7 +34,8 @@ class Connection:
 		else:
 			self.socket = socket.socket(socket.AF_INET)
 		error = self.__connect(host, port)
-		if error == errno.ENETUNREACH and socket.has_ipv6:
+		if socket.has_ipv6 and (error == errno.ENETUNREACH or isinstance(error, socket.gaierror)):
+			# tried ipv6 but we have no ipv6 connectivity or hostname doesn't have AAAA record
 			self.socket.close()
 			self.socket = socket.socket(socket.AF_INET)
 			error = self.__connect(host, port)
@@ -44,6 +45,8 @@ class Connection:
 		self.socket.setblocking(False)
 		try:
 			error = self.socket.connect_ex((host, port))
+			if error == errno.EINPROGRESS:
+				error = None
 		except socket.error as e:
 			error = e
 		return error
