@@ -48,7 +48,7 @@ try:
 		for fd, bot in fds.items():
 			cflags = flags.get(fd, 0)
 			if cflags & select.EPOLLHUP == select.EPOLLHUP:
-				bot.disconnect()
+				bot.disconnect() # after a while, check_disconnect will return True
 			elif cflags & select.EPOLLIN == select.EPOLLIN:
 				bot.handle()
 			elif bot.check_disconnect(ts):
