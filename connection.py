@@ -29,14 +29,24 @@ class Connection:
 			self.last_buf = last
 
 	def connect(self, host, port):
-		self.socket = socket.socket()
+		if socket.has_ipv6:
+			self.socket = socket.socket(socket.AF_INET6)
+		else:
+			self.socket = socket.socket(socket.AF_INET)
+		error = self.__connect(host, port)
+		if error == errno.ENETUNREACH and socket.has_ipv6:
+			self.socket.close()
+			self.socket = socket.socket(socket.AF_INET)
+			error = self.__connect(host, port)
+		return self.socket.fileno(), error
+
+	def __connect(self, host, port):
 		self.socket.setblocking(False)
-		error = None
 		try:
-			self.socket.connect_ex((host, port))
+			error = self.socket.connect_ex((host, port))
 		except socket.error as e:
 			error = e
-		return self.socket.fileno(), error
+		return error
 
 	def disconnect(self):
 		if self.socket is None:
