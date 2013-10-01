@@ -46,15 +46,17 @@ try:
 		flags = dict(results)
 		ts = time.time()
 		for fd, bot in fds.items():
-			if flags.get(fd, 0) & select.EPOLLIN == select.EPOLLIN:
+			cflags = flags.get(fd, 0)
+			if cflags & select.EPOLLHUP == select.EPOLLHUP:
+				bot.disconnect()
+			elif cflags & select.EPOLLIN == select.EPOLLIN:
 				bot.handle()
-			else:
-				if bot.check_disconnect(ts):
-					del fds[fd]
-					epoll.unregister(fd)
-					fd = bot.connect()
-					fds[fd] = bot
-					epoll.register(fd, EPOLLFLAGS)
+			elif bot.check_disconnect(ts):
+				del fds[fd]
+				epoll.unregister(fd)
+				fd = bot.connect()
+				fds[fd] = bot
+				epoll.register(fd, EPOLLFLAGS)
 		log.flush()
 	for b in fds.values():
 		b.disconnect()
