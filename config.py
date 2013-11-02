@@ -19,6 +19,9 @@ class BotConfig:
 		if len(attrs) != 0:
 			raise KeyError('missing required bot config keys: %s' % attrs)
 
+	def __str__(self):
+		return '<BotConfig: %s>' % self.__dict__
+
 __doc = yaml.load(open('config.yaml', 'r'))
 bots = (BotConfig(c) for c in __doc['bots'])
 settings = __doc['settings']

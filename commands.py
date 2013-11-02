@@ -1,5 +1,7 @@
 import config
+import log
 
+import time
 import re
 
 import requests
@@ -196,3 +198,33 @@ def youtube(bot, msg):
 	if hours > 0:
 		duration = '%s:%s' % (hours, duration)
 	bot.say(msg.target, "%s's video: %s, %s" % (msg.nick, title, duration))
+
+last_kill_id = rs.get('http://api.whelp.gg/last').json()[0]['kill_id']
+last_whelp_time = time.time()
+def whelp(bots):
+	from bot import STATE
+	global last_kill_id, last_whelp_time
+
+	if time.time() < last_whelp_time + 60:
+		return
+	kills = rs.get('http://api.whelp.gg/last/' + str(last_kill_id)).json()
+	notify = []
+	for k in kills:
+		item_hull_ratio = k['total_cost'] // (k['total_cost'] - k['hull_cost'])
+		if k['total_cost'] > 10e9 * 100 or item_hull_ratio > 100:
+			notify.append(k)
+		if k['kill_id'] > last_kill_id:
+			last_kill_id = k['kill_id']
+
+	eve_channel = False
+	for b in bots:
+		if b.state == STATE.IDENTIFIED and '#eve' in b.config.channels:
+			for k in notify:
+				cost = '{:,d}'.format(k['total_cost'] // 100 // int(1e6))
+				b.say('#eve', '%s million ISK %s    http://www.whelp.gg/kill/%d' % (cost, k['ship_name'], k['kill_id']))
+			eve_channel = True
+	if not eve_channel:
+		log.write('no #eve channel; disabling whelp')
+		last_whelp_time = float('inf')
+		return
+	last_whelp_time = time.time()

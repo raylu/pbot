@@ -65,7 +65,7 @@ class Bot:
 		}
 
 	def __str__(self):
-		return '<Bot: %s/%s>' % (config.host, config.nick)
+		return '<Bot: %s/%s>' % (self.config.host, self.config.nick)
 
 	def exception(self, line):
 		exc_type, exc_value, exc_tb = sys.exc_info()

@@ -9,6 +9,7 @@ if sys.argv[-1] == '-d':
 
 import log
 from bot import Bot
+import commands
 
 import errno
 import select
@@ -57,6 +58,7 @@ try:
 				fd = bot.connect()
 				fds[fd] = bot
 				epoll.register(fd, EPOLLFLAGS)
+		commands.whelp(fds.values())
 		log.flush()
 	for b in fds.values():
 		b.disconnect()
