@@ -210,7 +210,10 @@ def whelp(bots):
 	kills = rs.get('http://api.whelp.gg/last/' + str(last_kill_id)).json()
 	notify = []
 	for k in kills:
-		item_hull_ratio = k['total_cost'] // (k['total_cost'] - k['hull_cost'])
+		try:
+			item_hull_ratio = k['total_cost'] // (k['total_cost'] - k['hull_cost'])
+		except ZeroDivisionError:
+			item_hull_ratio = 0
 		if k['total_cost'] > 10e9 * 100 or item_hull_ratio > 100:
 			notify.append(k)
 		if k['kill_id'] > last_kill_id:
