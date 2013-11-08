@@ -199,7 +199,7 @@ def youtube(bot, msg):
 		duration = '%s:%s' % (hours, duration)
 	bot.say(msg.target, "%s's video: %s, %s" % (msg.nick, title, duration))
 
-last_kill_id = rs.get('http://api.whelp.gg/last').json()[0]['kill_id']
+last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
 last_whelp_time = time.time()
 def whelp(bots):
 	from bot import STATE
@@ -225,7 +225,9 @@ def whelp(bots):
 			if b.state == STATE.IDENTIFIED and '#eve' in b.config.channels:
 				for k in notify:
 					cost = '{:,d}'.format(k['total_cost'] // 100 // int(1e6))
-					b.say('#eve', '%s million ISK %s    http://www.whelp.gg/kill/%d' % (cost, k['ship_name'], k['kill_id']))
+					line = '%s million ISK %s    http://www.whelp.gg/kill/%d' % (cost, k['ship_name'], k['kill_id'])
+					b.say('#eve', line)
+					log.write(line)
 				eve_channel = True
 		if not eve_channel:
 			log.write('no #eve channel; disabling whelp')
