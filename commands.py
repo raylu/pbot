@@ -212,27 +212,21 @@ def whelp(bots):
 		notify = []
 		for k in kills:
 			try:
-				item_hull_ratio = (k['total_cost'] - k['hull_cost']) // k['total_cost']
+				item_hull_ratio = (k['total_cost'] - k['hull_cost']) // k['hull_cost']
 			except ZeroDivisionError:
 				item_hull_ratio = 0
-			if k['total_cost'] > 30e9 * 100 or item_hull_ratio > 10:
+			# total > 30 billion or (total > 100 million and ratio > 4)
+			if k['total_cost'] > 30e9 * 100 or (k['total_cost'] > 100e6 * 100 and item_hull_ratio > 4):
 				notify.append(k)
 			if k['kill_id'] > last_kill_id:
 				last_kill_id = k['kill_id']
 
-		eve_channel = False
 		for b in bots:
 			if b.state == STATE.IDENTIFIED and '#eve' in b.config.channels:
 				for k in notify:
 					cost = '{:,d}'.format(k['total_cost'] // 100 // int(1e6))
 					line = '%s million ISK %s    http://www.whelp.gg/kill/%d' % (cost, k['ship_name'], k['kill_id'])
 					b.say('#eve', line)
-					log.write(line)
-				eve_channel = True
-		if not eve_channel:
-			log.write('no #eve channel; disabling whelp')
-			last_whelp_time = float('inf')
-			return
 		last_whelp_time = time.time()
 	except:
 		log.write(traceback.format_exc())
