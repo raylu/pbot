@@ -1,6 +1,7 @@
 import config
 import log
 
+import json
 import time
 import re
 
@@ -154,12 +155,14 @@ def calc(bot, target, nick, command, text):
 
 	if not text:
 		return
-	response = rs.get('http://www.google.com/ig/calculator', params={'hl': 'en', 'q': text}).text
-	match = re.match('{lhs: "(.*)",rhs: "(.*)",error: "(.*)",icc: (true|false)}', response)
-	if match is None or match.group(3) != '':
+	response = rs.get('http://www.wolframalpha.com/input/', params={'i': text}).text
+	matches = re.findall('context\.jsonArray\.popups\.pod_....\.push\((.*)\);', response)
+	if len(matches) < 2:
 		bot.say(target, nick + ': Error calculating.')
 		return
-	output = "%s = %s" % (match.group(1), match.group(2))
+	input_interpretation = json.loads(matches[0])['stringified']
+	result = json.loads(matches[1])['stringified']
+	output = '%s = %s' % (input_interpretation, result)
 	output = output.replace('\u00a0', ' ') # replace nbsp with space
 	output = codecs.getdecoder('unicode_escape')(output)[0]
 	output = re.subn('<sup>(.*)</sup>', r'^(\1)', output)[0]
