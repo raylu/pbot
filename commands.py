@@ -206,6 +206,7 @@ last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
 last_whelp_time = time.time()
 def whelp(bots):
 	from bot import STATE
+	import traceback
 	global last_kill_id, last_whelp_time
 
 	if time.time() < last_whelp_time + 60:
@@ -219,7 +220,7 @@ def whelp(bots):
 			except ZeroDivisionError:
 				item_hull_ratio = 0
 			# total > 30 billion or (total > 100 million and ratio > 4)
-			if k['total_cost'] > 30e9 * 100 or (k['total_cost'] > 100e6 * 100 and item_hull_ratio > 4):
+			if k['total_cost'] > 30e9 * 100 or (k['total_cost'] > 100e6 * 100 and item_hull_ratio > 6):
 				notify.append(k)
 			if k['kill_id'] > last_kill_id:
 				last_kill_id = k['kill_id']
