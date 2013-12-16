@@ -2,8 +2,9 @@ import config
 import log
 
 import json
-import time
+import operator
 import re
+import time
 
 import requests
 import oursql
@@ -122,8 +123,31 @@ def jumps(bot, target, nick, command, text):
 	if len(split) != 2:
 		bot.say('usage: %s [from] [to]' % command)
 		return
-	r = rs.get('http://api.eve-central.com/api/route/from/%s/to/%s' % (split[0].capitalize(), split[1].capitalize()))
-	jumps = r.json()
+	with db.cursor() as curs:
+		curs.execute('''
+				SELECT solarSystemName FROM mapSolarSystems
+				WHERE solarSystemName LIKE ? or solarSystemName LIKE ?
+				''', (split[0] + '%', split[1] + '%')
+		)
+		results = list(map(operator.itemgetter(0), curs.fetchmany(2)))
+	query = [None, None]
+	for i, s in enumerate(split):
+		s = s.lower()
+		for r in results:
+			if r.lower().startswith(s):
+				query[i] = r
+				break
+		else:
+			bot.say(target, '%s: could not find system starting with %s' % (nick, s))
+			break
+	if None in query:
+		return
+	r = rs.get('http://api.eve-central.com/api/route/from/%s/to/%s' % (query[0], query[1]))
+	try:
+		jumps = r.json()
+	except ValueError:
+		bot.say(target, '%s: error getting jumps' % nick)
+		return
 	jumps_split = []
 	for j in jumps:
 		j_str = j['to']['name']
