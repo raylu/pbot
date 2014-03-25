@@ -3,7 +3,10 @@ import log
 
 import json
 import operator
+import os
 import re
+import signal
+import subprocess
 import time
 
 import requests
@@ -225,6 +228,29 @@ def youtube(bot, msg):
 	if hours > 0:
 		duration = '%s:%s' % (hours, duration)
 	bot.say(msg.target, "%s's video: %s, %s" % (msg.nick, title, duration))
+
+def python(bot, msg):
+	code = msg.text[4:]
+	pypy = subprocess.Popen(['pypy-sandbox'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setpgrp)
+	try:
+		stdout, stderr = pypy.communicate(code, 2)
+	except subprocess.TimeoutExpired:
+		bot.say(msg.target, '%s: timed out after 2 seconds' % msg.nick)
+		os.killpg(pypy.pid, signal.SIGKILL)
+		return
+	errlines = stderr.split('\n')
+	if len(errlines) > 3:
+		for i in range(1, len(errlines)):
+			line = errlines[-i] # iterate backwards
+			if line:
+				bot.say(msg.target, line)
+				break
+	else:
+		for line in stdout.split('\n'):
+			if line.startswith('>>>> '):
+				bot.say(msg.target, line[5:])
+				break
 
 last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
 last_whelp_time = time.time()
