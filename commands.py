@@ -269,8 +269,8 @@ def whelp(bots):
 				item_hull_ratio = (k['total_cost'] - k['hull_cost']) // k['hull_cost']
 			except ZeroDivisionError:
 				item_hull_ratio = 0
-			# total > 30 billion or (total > 100 million and ratio > 4)
-			if k['total_cost'] > 30e9 * 100 or (k['total_cost'] > 100e6 * 100 and item_hull_ratio > 6):
+			# total > 30 billion or (total > 500 million and ratio > 7)
+			if k['total_cost'] > 30e9 * 100 or (k['total_cost'] > 500e6 * 100 and item_hull_ratio > 7):
 				notify.append(k)
 			if k['kill_id'] > last_kill_id:
 				last_kill_id = k['kill_id']
