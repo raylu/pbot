@@ -244,7 +244,7 @@ def python(bot, msg):
 		for i in range(1, len(errlines)):
 			line = errlines[-i] # iterate backwards
 			if line:
-				bot.say(msg.target, '%s: line' % msg.nick)
+				bot.say(msg.target, '%s: %s' % (msg.nick, line))
 				break
 	else:
 		for line in stdout.split('\n'):
