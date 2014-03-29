@@ -229,14 +229,17 @@ def youtube(bot, msg):
 		duration = '%s:%s' % (hours, duration)
 	bot.say(msg.target, "%s's video: %s, %s" % (msg.nick, title, duration))
 
+PATH = os.environ['PATH']
+username = os.getlogin()
+PATH = ':'.join(filter(lambda p: username not in p, PATH.split(':'))) # filter out virtualenv
 def python(bot, msg):
 	code = msg.text[4:]
 	pypy = subprocess.Popen(['pypy-sandbox'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-			stderr=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setpgrp)
+			stderr=subprocess.PIPE, env={'PATH': PATH}, universal_newlines=True, preexec_fn=os.setpgrp)
 	try:
-		stdout, stderr = pypy.communicate(code, 2)
+		stdout, stderr = pypy.communicate(code, 5)
 	except subprocess.TimeoutExpired:
-		bot.say(msg.target, '%s: timed out after 2 seconds' % msg.nick)
+		bot.say(msg.target, '%s: timed out after 5 seconds' % msg.nick)
 		os.killpg(pypy.pid, signal.SIGKILL)
 		return
 	errlines = stderr.split('\n')
