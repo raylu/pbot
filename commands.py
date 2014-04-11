@@ -247,12 +247,12 @@ def python(bot, msg):
 		for i in range(1, len(errlines)):
 			line = errlines[-i] # iterate backwards
 			if line:
-				bot.say(msg.target, '%s: %s' % (msg.nick, line))
+				bot.say(msg.target, '%s: %s' % (msg.nick, line[:250]))
 				break
 	else:
 		for line in stdout.split('\n'):
 			if line.startswith('>>>> '):
-				bot.say(msg.target, '%s: %s' % (msg.nick, line[5:]))
+				bot.say(msg.target, '%s: %s' % (msg.nick, line[5:250]))
 				break
 
 last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
