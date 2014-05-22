@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.4
 
 import config
 
@@ -11,31 +11,30 @@ import log
 from bot import Bot
 import commands
 
+import asyncio
 import errno
-import select
 import signal
 import time
 
-epoll = select.epoll()
-EPOLLFLAGS = select.EPOLLIN | select.EPOLLERR | select.EPOLLHUP
+loop = asyncio.get_event_loop()
 
-keep_going = True
-def quit(signum, frame):
-	global keep_going
-	keep_going = False
+def quit():
+	for bot in bots:
+		asyncio.async(bot.disconnect())
+	loop.stop()
 for s in [signal.SIGTERM, signal.SIGINT]:
-	signal.signal(s, quit)
-	signal.siginterrupt(s, False)
+	loop.add_signal_handler(s, quit)
 
-fds = {}
+bots = []
 for c in config.bots:
 	if not c.autoconnect:
 		continue
 	bot = Bot(c)
-	fd = bot.connect()
-	fds[fd] = bot
-	epoll.register(fd, EPOLLFLAGS)
+	asyncio.async(bot.connect())
+	bots.append(bot)
+loop.run_forever()
 
+'''
 try:
 	while keep_going:
 		try:
@@ -58,10 +57,11 @@ try:
 				fd = bot.connect()
 				fds[fd] = bot
 				epoll.register(fd, EPOLLFLAGS)
-		commands.whelp(fds.values())
+		#commands.whelp(fds.values())
 		log.flush()
 	for b in fds.values():
 		b.disconnect()
 finally:
 	epoll.close()
 	log.close()
+'''

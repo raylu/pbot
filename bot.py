@@ -3,6 +3,7 @@ import config
 import log
 import commands
 
+import asyncio
 import imp
 import os
 import sys
@@ -83,6 +84,7 @@ class Bot:
 	def log(self, text):
 		log.write('%s/%s: %s' % (self.config.host, self.config.nick, text))
 
+	@asyncio.coroutine
 	def connect(self):
 		host = self.config.host
 		port = self.config.port
@@ -91,16 +93,23 @@ class Bot:
 		self.awaiting_pong = False
 		if not self.conn:
 			self.conn = Connection()
-		fd, error = self.conn.connect(host, port)
+		yield from self.conn.connect(host, port)
+		self.state = STATE.CONNECTING
+		'''
 		if error:
 			self.log(error)
 			self.state = STATE.DISCONNECTED
 		else:
 			self.state = STATE.CONNECTING
 		return fd
+		'''
+		while self.state != STATE.DISCONNECTED:
+			yield from self.handle()
 
+	@asyncio.coroutine
 	def handle(self):
-		for line in self.conn.recv():
+		lines = yield from self.conn.recv()
+		for line in lines:
 			msg = ServerMessage(line)
 			handler = self.handlers.get(msg.command)
 			if handler:
@@ -123,7 +132,7 @@ class Bot:
 			self.ping()
 
 	def nick(self, new_nick):
-		self.conn.send('nick', new_nick)
+		self.conn.send('NICK', new_nick)
 
 	def join(self, channel):
 		self.conn.send('JOIN', channel)
@@ -141,10 +150,11 @@ class Bot:
 		self.conn.send('PING', 'pbot')
 		self.awaiting_pong = True
 
+	@asyncio.coroutine
 	def disconnect(self):
 		self.log('disconnecting')
-		self.conn.disconnect()
 		self.state = STATE.DISCONNECTED
+		yield from self.conn.disconnect()
 
 	def __join_channels(self):
 		self.log('autojoining channels...')
