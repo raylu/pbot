@@ -1,8 +1,10 @@
-from connection import Connection
+#from connection import Connection
 import config
 import log
 import commands
 
+import asynchat
+import asyncore
 import imp
 import os
 import sys
@@ -47,14 +49,17 @@ class ServerMessage:
 	def __str__(self):
 		return 'ServerMessage(%r)' % self.line
 
-class Bot:
+class Bot(asynchat.async_chat):
 	def __init__(self, config):
+		asynchat.async_chat.__init__(self)
 		self.config = config
 		self.state = STATE.DISCONNECTED
-		self.conn = None
+		self.buf = None
 		self.last_recv = None
 		self.awaiting_pong = False
+		self.debug = True
 
+		self.set_terminator(b'\r\n')
 		self.handlers = {
 			'PING': self.handle_ping,
 			'376': self.handle_motd, # RPL_ENDOFMOTD
@@ -83,31 +88,31 @@ class Bot:
 	def log(self, text):
 		log.write('%s/%s: %s' % (self.config.host, self.config.nick, text))
 
-	def connect(self):
+	def connect_irc(self):
+		self.buf = b''
+		self.last_recv = time.time()
+		self.awaiting_pong = False
+
 		host = self.config.host
 		port = self.config.port
 		self.log('connecting to port %d...' % port)
-		self.last_recv = time.time()
-		self.awaiting_pong = False
-		if not self.conn:
-			self.conn = Connection()
-		fd, error = self.conn.connect(host, port)
-		if error:
-			self.log(error)
-			self.state = STATE.DISCONNECTED
-		else:
-			self.state = STATE.CONNECTING
-		return fd
+		self.create_socket()
+		self.connect((host, port))
 
-	def handle(self):
-		for line in self.conn.recv():
-			msg = ServerMessage(line)
-			handler = self.handlers.get(msg.command)
-			if handler:
-				try:
-					handler(msg)
-				except:
-					self.exception(line)
+	def collect_incoming_data(self, data): # called by asynchat
+		self.buf += data
+
+	def found_terminator(self): # called by asynchat
+		line = self.buf.decode('utf-8', 'replace')
+		if self.debug: print('<-', line)
+		msg = ServerMessage(line)
+		handler = self.handlers.get(msg.command)
+		if handler:
+			try:
+				handler(msg)
+			except:
+				self.exception(line)
+		self.buf = b''
 		self.last_recv = time.time()
 
 	def check_disconnect(self, ts):
@@ -122,23 +127,28 @@ class Bot:
 			# identified lest we get stuck forever in a partially-connected state
 			self.ping()
 
+	def send_irc(self, *data):
+		line = ' '.join(data) + '\r\n'
+		if self.debug: print('->', line, end='')
+		self.push(line.encode('utf-8'))
+
 	def nick(self, new_nick):
-		self.conn.send('nick', new_nick)
+		self.send_irc('NICK', new_nick)
 
 	def join(self, channel):
-		self.conn.send('JOIN', channel)
+		self.send_irc('JOIN', channel)
 
 	def say(self, target, message):
-		self.conn.send('PRIVMSG', target, ':'+message)
+		self.send_irc('PRIVMSG', target, ':'+message)
 
 	def notice(self, target, message):
-		self.conn.send('NOTICE', target, ':'+message)
+		self.send_irc('NOTICE', target, ':'+message)
 
 	def ctcp_reply(self, target, *args):
 		self.notice(target, '%c%s%c' % (1, ' '.join(args), 1))
 
 	def ping(self):
-		self.conn.send('PING', 'pbot')
+		self.send_irc('PING', 'pbot')
 		self.awaiting_pong = True
 
 	def disconnect(self):
@@ -152,7 +162,7 @@ class Bot:
 			self.join(c)
 
 	def handle_ping(self, msg):
-		self.conn.send('PONG', msg.target)
+		self.send_irc('PONG', msg.target)
 
 	def handle_motd(self, msg):
 		self.state = STATE.UNIDENTIFIED
@@ -163,7 +173,7 @@ class Bot:
 	def handle_notice(self, msg):
 		if self.state < STATE.REGISTERING:
 			self.nick(self.config.nick)
-			self.conn.send('USER', self.config.user, 'pbot', 'pbot', ':'+self.config.user)
+			self.send_irc('USER', self.config.user, 'pbot', 'pbot', ':'+self.config.user)
 			self.state = STATE.REGISTERING
 		elif self.state == STATE.UNIDENTIFIED:
 			if self.config.nickserv is None:
