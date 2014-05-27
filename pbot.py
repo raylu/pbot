@@ -15,6 +15,7 @@ import errno
 import select
 import signal
 import time
+import traceback
 
 epoll = select.epoll()
 EPOLLFLAGS = select.EPOLLIN | select.EPOLLERR | select.EPOLLHUP
@@ -62,6 +63,9 @@ try:
 		log.flush()
 	for b in fds.values():
 		b.disconnect()
+except:
+	exc_list = traceback.format_exception(*sys.exc_info())
+	log.write(''.join(exc_list))
 finally:
 	epoll.close()
 	log.close()
