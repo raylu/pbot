@@ -57,7 +57,6 @@ class Connection:
 		try:
 			self.send('QUIT')
 		except socket.error as e:
-			if e.errno != errno.EPIPE:
-				raise
+			pass
 		self.socket.close()
 		self.socket = None
