@@ -55,7 +55,10 @@ try:
 				bot.handle()
 			elif bot.check_disconnect(ts):
 				del fds[fd]
-				epoll.unregister(fd)
+				try:
+					epoll.unregister(fd)
+				except FileNotFoundError:
+					pass
 				fd = bot.connect()
 				fds[fd] = bot
 				epoll.register(fd, EPOLLFLAGS)
