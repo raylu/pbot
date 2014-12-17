@@ -234,6 +234,15 @@ def python_inline(bot, msg):
 	bot.say(msg.target, '%s: %s' % (msg.nick, python(code)))
 
 def python_multiline(bot, msg):
+	lines = bot.scripts[msg.nick]
+	indent = 0
+	for i, line in enumerate(lines):
+		for j, char in enumerate(line):
+			if char != ' ':
+				break
+		if j < indent:
+			lines[i] = '\n' + line
+		indent = i
 	code = '\n'.join(bot.scripts[msg.nick]) + '\n\n'
 	bot.say(msg.target, '%s: %s' % (msg.nick, python(code)))
 
@@ -257,8 +266,7 @@ def python(code):
 	else:
 		for line in stdout.split('\n'):
 			if line.startswith('>>>> '):
-				line = line[5:]
-				while line[:5] == '.... ':
+				while line[:5] in ['>>>> ', '.... ']:
 					line = line[5:]
 				return line[:250]
 
