@@ -229,31 +229,38 @@ def youtube(bot, msg):
 		duration = '%s:%s' % (hours, duration)
 	bot.say(msg.target, "%s's video: %s, %s" % (msg.nick, title, duration))
 
+def python_inline(bot, msg):
+	code = msg.text[4:]
+	bot.say(msg.target, '%s: %s' % (msg.nick, python(code)))
+
+def python_multiline(bot, msg):
+	code = '\n'.join(bot.scripts[msg.nick]) + '\n\n'
+	bot.say(msg.target, '%s: %s' % (msg.nick, python(code)))
+
 PATH = os.environ['PATH']
 username = os.getlogin()
 PATH = ':'.join(filter(lambda p: username not in p, PATH.split(':'))) # filter out virtualenv
-def python(bot, msg):
-	code = msg.text[4:]
+def python(code):
 	pypy = subprocess.Popen(['pypy-sandbox'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE, env={'PATH': PATH}, universal_newlines=True, preexec_fn=os.setpgrp)
 	try:
 		stdout, stderr = pypy.communicate(code, 5)
 	except subprocess.TimeoutExpired:
-		bot.say(msg.target, '%s: timed out after 5 seconds' % msg.nick)
 		os.killpg(pypy.pid, signal.SIGKILL)
-		return
+		return 'timed out after 5 seconds'
 	errlines = stderr.split('\n')
 	if len(errlines) > 3:
 		for i in range(1, len(errlines)):
 			line = errlines[-i] # iterate backwards
 			if line:
-				bot.say(msg.target, '%s: %s' % (msg.nick, line[:250]))
-				break
+				return line[:250]
 	else:
 		for line in stdout.split('\n'):
 			if line.startswith('>>>> '):
-				bot.say(msg.target, '%s: %s' % (msg.nick, line[5:250]))
-				break
+				line = line[5:]
+				while line[:5] == '.... ':
+					line = line[5:]
+				return line[:250]
 
 last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
 last_whelp_time = time.time()

@@ -3,6 +3,7 @@ import config
 import log
 import commands
 
+from collections import defaultdict
 import imp
 import os
 import sys
@@ -63,6 +64,8 @@ class Bot:
 			'MODE': self.handle_mode,
 			'PRIVMSG': self.handle_privmsg,
 		}
+
+		self.scripts = defaultdict(list)
 
 	def __str__(self):
 		return '<Bot: %s/%s>' % (self.config.host, self.config.nick)
@@ -203,7 +206,16 @@ class Bot:
 				if handler:
 					handler(self, msg.target, msg.nick, command, text)
 			elif msg.text.startswith('>>> '):
-				commands.python(self, msg)
+				commands.python_inline(self, msg)
+			elif msg.text.startswith('>>>>'):
+				if len(msg.text) == 4:
+					commands.python_multiline(self, msg)
+					del self.scripts[msg.nick]
+				elif msg.text[4] == ' ':
+					if len(self.scripts[msg.nick]) >= 16:
+						bot.say(msg.target, '%s: script cannot be longer than 16 lines' % msg.nick)
+					else:
+						self.scripts[msg.nick].append(msg.text[5:])
 			else:
 				commands.youtube(self, msg)
 
