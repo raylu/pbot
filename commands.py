@@ -222,7 +222,7 @@ def youtube(bot, msg):
 	title = video['snippet']['title']
 	duration = video['contentDetails']['duration']
 	duration = duration[2:].replace('H', 'h ').replace('M', 'm ').replace('S', 's')
-	date = video['snippet']['publishedAt']
+	date = video['snippet']['publishedAt'].split('T', 1)[0]
 	bot.say(msg.target, "%s's video: %s, %s, %s" % (msg.nick, title, duration, date))
 
 def python_inline(bot, msg):
@@ -290,11 +290,11 @@ def whelp(bots):
 				last_kill_id = k['kill_id']
 
 		for b in bots:
-			if b.state == STATE.IDENTIFIED and '#eve' in b.config.channels:
+			if b.state == STATE.IDENTIFIED and '#ellipsis' in b.config.channels:
 				for k in notify:
 					cost = '{:,d}'.format(k['total_cost'] // 100 // int(1e6))
 					line = '%s million ISK %s    http://www.whelp.gg/kill/%d' % (cost, k['ship_name'], k['kill_id'])
-					b.say('#eve', line)
+					b.say('#ellipsis', line)
 		last_whelp_time = time.time()
 	except:
 		log.write(traceback.format_exc())
