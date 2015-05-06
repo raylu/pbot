@@ -209,25 +209,21 @@ def youtube(bot, msg):
 	if match is None:
 		return
 	vid = match.group(4)
-	url = 'http://gdata.youtube.com/feeds/api/videos/' + vid
 	params = {
-		'v': 2,
-		'strict': True,
-		'alt': 'json',
+		'id': vid,
+		'part': 'contentDetails,snippet',
+		'key': 'AIzaSyAehOw6OjS2ofPSSo9AerCGuBzStsX5tks',
 	}
-	response = rs.get(url, params=params)
+	response = rs.get('https://www.googleapis.com/youtube/v3/videos', params=params)
 	if response.status_code == 400:
 		bot.say(msg.target, "%s: invalid id" % msg.nick)
 		return
-	entry = response.json()['entry']
-	title = entry['title']['$t']
-	seconds = int(entry['media$group']['yt$duration']['seconds'])
-	minutes, seconds = divmod(seconds, 60)
-	hours, minutes = divmod(minutes, 60)
-	duration = '%02d:%02d' % (minutes, seconds)
-	if hours > 0:
-		duration = '%s:%s' % (hours, duration)
-	bot.say(msg.target, "%s's video: %s, %s" % (msg.nick, title, duration))
+	video = response.json()['items'][0]
+	title = video['snippet']['title']
+	duration = video['contentDetails']['duration']
+	duration = duration[2:].replace('H', 'h ').replace('M', 'm ').replace('S', 's')
+	date = video['snippet']['publishedAt']
+	bot.say(msg.target, "%s's video: %s, %s, %s" % (msg.nick, title, duration, date))
 
 def python_inline(bot, msg):
 	code = msg.text[4:]
