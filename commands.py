@@ -197,7 +197,7 @@ def calc(bot, target, nick, command, text):
 	output = decode_htmlentities(output)
 	bot.say(target, '%s: %s' % (nick, output))
 
-def roll(bot, target, nick, text):
+def roll(bot, target, nick, command, text):
 	dice = 1
 	size = 6
 
