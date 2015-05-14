@@ -4,6 +4,7 @@ import log
 import json
 import operator
 import os
+import random
 import re
 import signal
 import subprocess
@@ -196,11 +197,37 @@ def calc(bot, target, nick, command, text):
 	output = decode_htmlentities(output)
 	bot.say(target, '%s: %s' % (nick, output))
 
+def roll(bot, target, nick, text):
+	dice = 1
+	size = 6
+
+	split = text.split('d', 1)
+
+	if len(split) == 2:
+		try:
+			dice = int(split[0])
+			size = int(split[1])
+		except ValueError:
+			bot.say(target, 'usage: ' + 'roll [1d6]')
+
+	if not (1 <= dice <= 10) or not (1 < size <= 100):
+		bot.say(target, nick + ': max is 10d100')
+		return
+
+	results = [random.randint(1, size) for i in range(dice)]
+	result = "%dd%d: " % (dice, size) + ', '.join(str(i) for i in results)
+	if dice == 1:
+		bot.say(target, result)
+	else:
+		bot.say(target, "%s; total: %d" % (result, sum(results)))
+
+
 handlers = {
 	'pc': price_check,
 	'jumps': jumps,
 	'reload': reload,
 	'calc': calc,
+	'roll': roll,
 }
 
 youtube_re = re.compile('((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
