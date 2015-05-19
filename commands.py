@@ -211,7 +211,7 @@ def roll(bot, target, nick, command, text):
 			bot.say(target, 'usage: ' + 'roll [1d6]')
 
 	if not (1 <= dice <= 10) or not (1 < size <= 100):
-		bot.say(target, nick + ': max is 10d100')
+		bot.say(target, nick + ': Valid: 1d2 to 10d100')
 		return
 
 	results = [random.randint(1, size) for i in range(dice)]
