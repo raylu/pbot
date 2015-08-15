@@ -4,11 +4,11 @@ import log
 import json
 import operator
 import os
-import random
 import re
 import signal
 import subprocess
 import time
+import urllib
 
 import requests
 import oursql
@@ -198,28 +198,14 @@ def calc(bot, target, nick, command, text):
 	bot.say(target, '%s: %s' % (nick, output))
 
 def roll(bot, target, nick, command, text):
-	dice = 1
-	size = 6
-
-	split = text.split('d', 1)
-
-	if len(split) == 2:
-		try:
-			dice = int(split[0])
-			size = int(split[1])
-		except ValueError:
-			bot.say(target, 'usage: ' + 'roll [1d6]')
-
-	if not (1 <= dice <= 10) or not (1 < size <= 100):
-		bot.say(target, nick + ': Valid: 1d2 to 10d100')
-		return
-
-	results = [random.randint(1, size) for i in range(dice)]
-	result = "%dd%d: " % (dice, size) + ', '.join(str(i) for i in results)
-	if dice == 1:
-		bot.say(target, result)
-	else:
-		bot.say(target, "%s; total: %d" % (result, sum(results)))
+	if not text:
+		text = '1d6'
+	response = rs.get('https://rolz.org/api/?' + urllib.parse.quote_plus(text))
+	split = response.text.split('\n')
+	details = split[2].split('=', 1)[1].strip()
+	details = details.replace(' +', ' + ').replace(' +  ', ' + ')
+	result = split[1].split('=', 1)[1]
+	bot.say(target, "%s: %s = %s" % (nick, details, result))
 
 
 handlers = {
