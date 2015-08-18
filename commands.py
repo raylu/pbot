@@ -205,7 +205,7 @@ def roll(bot, target, nick, command, text):
 	details = split[2].split('=', 1)[1].strip()
 	details = details.replace(' +', ' + ').replace(' +  ', ' + ')
 	result = split[1].split('=', 1)[1]
-	bot.say(target, "%s: %s = %s" % (nick, details, result))
+	bot.say(target, "%s: %s %s" % (nick, result, details))
 
 
 handlers = {
