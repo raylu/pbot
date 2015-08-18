@@ -6,6 +6,7 @@ import commands
 from collections import defaultdict
 import imp
 import os
+import socket
 import sys
 import time
 import traceback
@@ -89,18 +90,27 @@ class Bot:
 	def connect(self):
 		host = self.config.host
 		port = self.config.port
-		self.log('connecting to port %d...' % port)
-		self.last_recv = time.time()
-		self.awaiting_pong = False
-		if not self.conn:
-			self.conn = Connection()
-		fd, error = self.conn.connect(host, port)
-		if error:
-			self.log(error)
-			self.state = STATE.DISCONNECTED
-		else:
-			self.state = STATE.CONNECTING
-		return fd
+
+		while True:
+			self.log('connecting to port %d...' % port)
+			self.last_recv = time.time()
+			self.awaiting_pong = False
+			if not self.conn:
+				self.conn = Connection()
+			error = self.conn.connect(host, port)
+			if error:
+				self.log(error)
+				self.state = STATE.DISCONNECTED
+			else:
+				self.state = STATE.CONNECTING
+
+			while self.state != STATE.DISCONNECTED:
+				try:
+					self.handle()
+					self.check_disconnect()
+				except socket.error as e:
+					self.log(e)
+					self.disconnect()
 
 	def handle(self):
 		for line in self.conn.recv():
@@ -113,13 +123,12 @@ class Bot:
 					self.exception(line)
 		self.last_recv = time.time()
 
-	def check_disconnect(self, ts):
-		time_since = ts - self.last_recv
+	def check_disconnect(self):
+		time_since = time.time() - self.last_recv
 		ping_timeout_wait = config.PING_INTERVAL + config.PING_TIMEOUT
 		if time_since > ping_timeout_wait:
 			self.log('no reply from server in %ds' % ping_timeout_wait)
 			self.disconnect()
-			return True
 		elif time_since > config.PING_INTERVAL and not self.awaiting_pong and self.state == STATE.IDENTIFIED:
 			# don't let the server's reply to ping reset last_recv unless we're fully
 			# identified lest we get stuck forever in a partially-connected state
@@ -213,7 +222,7 @@ class Bot:
 					del self.scripts[msg.nick]
 				elif msg.text[4] == ' ':
 					if len(self.scripts[msg.nick]) >= 16:
-						bot.say(msg.target, '%s: script cannot be longer than 16 lines' % msg.nick)
+						self.say(msg.target, '%s: script cannot be longer than 16 lines' % msg.nick)
 					else:
 						self.scripts[msg.nick].append(msg.text[5:])
 			else:

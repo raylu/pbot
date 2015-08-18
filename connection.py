@@ -15,7 +15,12 @@ class Connection:
 		self.socket.sendall(bytes(line, 'utf-8'))
 
 	def recv(self):
-		data = self.socket.recv(4096)
+		try:
+			data = self.socket.recv(4096)
+		except socket.error as e:
+			if e.errno is None: # recv timed out
+				return
+			raise
 		if self.last_buf is not None:
 			data = self.last_buf + data
 			self.last_buf = None
@@ -39,14 +44,11 @@ class Connection:
 			self.socket.close()
 			self.socket = socket.socket(socket.AF_INET)
 			error = self.__connect(host, port)
-		return self.socket.fileno(), error
+		return error
 
 	def __connect(self, host, port):
-		self.socket.setblocking(False)
 		try:
 			error = self.socket.connect_ex((host, port))
-			if error == errno.EINPROGRESS:
-				error = None
 		except socket.error as e:
 			error = e
 		return error
@@ -56,7 +58,7 @@ class Connection:
 			return
 		try:
 			self.send('QUIT')
-		except socket.error as e:
+		except socket.error:
 			pass
 		self.socket.close()
 		self.socket = None
