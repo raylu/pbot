@@ -188,7 +188,8 @@ def calc(bot, target, nick, command, text):
 	if len(matches) < 2:
 		bot.say(target, nick + ': Error calculating.')
 		return
-	input_interpretation = json.loads(matches[0])['stringified']
+	json_str = codecs.escape_decode(matches[0])[0].decode('utf-8')
+	input_interpretation = json.loads(json_str)['stringified']
 	result = json.loads(matches[1])['stringified']
 	output = '%s = %s' % (input_interpretation, result)
 	output = output.replace('\u00a0', ' ') # replace nbsp with space
