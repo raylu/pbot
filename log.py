@@ -17,9 +17,7 @@ def write(text):
 	logfile.write(line)
 
 def flush():
-	global logfile
 	logfile.flush()
 
 def close():
-	global logfile
 	logfile.close()

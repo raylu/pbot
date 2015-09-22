@@ -31,4 +31,5 @@ for c in config.bots:
 	threading.Thread(target=bot.connect, daemon=True).start()
 
 while True:
-	time.sleep(600)
+	time.sleep(60)
+	log.flush()
