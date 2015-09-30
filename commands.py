@@ -1,7 +1,6 @@
 import config
 import log
 
-import json
 import operator
 import os
 import re
@@ -162,41 +161,9 @@ def jumps(bot, target, nick, command, text):
 		jumps_split.append(j_str)
 	bot.say(target, '%d jumps: %s' % (len(jumps), ', '.join(jumps_split)))
 
-entity_re = re.compile(r'&(#?)(x?)(\w+);')
 def calc(bot, target, nick, command, text):
-	import codecs
-	import html.entities
-	def substitute_entity(match):
-		ent = match.group(3)
-		if match.group(1) == "#":
-			if match.group(2) == '':
-				return chr(int(ent))
-			elif match.group(2) == 'x':
-				return chr(int('0x'+ent, 16))
-		else:
-			cp = html.entities.name2codepoint.get(ent)
-			if cp:
-				return chr(cp)
-			return match.group()
-	def decode_htmlentities(string):
-		return entity_re.subn(substitute_entity, string)[0]
-
-	if not text:
-		return
-	response = rs.get('http://www.wolframalpha.com/input/', params={'i': text}).text
-	matches = re.findall('context\.jsonArray\.popups\.pod_....\.push\((.*)\);', response)
-	if len(matches) < 2:
-		bot.say(target, nick + ': Error calculating.')
-		return
-	json_str = codecs.escape_decode(matches[0])[0].decode('utf-8')
-	input_interpretation = json.loads(json_str)['stringified']
-	result = json.loads(matches[1])['stringified']
-	output = '%s = %s' % (input_interpretation, result)
-	output = output.replace('\u00a0', ' ') # replace nbsp with space
-	output = codecs.getdecoder('unicode_escape')(output)[0]
-	output = re.subn('<sup>(.*)</sup>', r'^(\1)', output)[0]
-	output = decode_htmlentities(output)
-	bot.say(target, '%s: %s' % (nick, output))
+	response = rs.get('https://www.calcatraz.com/calculator/api', params={'c': text})
+	bot.say(target, '%s: %s' % (nick, response.text.rstrip()))
 
 def roll(bot, target, nick, command, text):
 	if not text:
