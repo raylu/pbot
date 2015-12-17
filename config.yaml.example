@@ -10,5 +10,6 @@ bots:
 settings:
     owner: 'raylu'
     autoreload: false # automatically reload commands.py when it changes?
+    eve_dsn: 'dbname=eve user=eve'
 
 # vim: set et ft=yaml:

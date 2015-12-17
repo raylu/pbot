@@ -14,7 +14,7 @@ import psycopg2
 
 rs = requests.Session()
 rs.headers.update({'User-Agent': 'pbot'})
-db = psycopg2.connect("dbname=eve user=eve")
+db = psycopg2.connect(config.settings['eve_dsn'])
 
 def reload(bot, target, nick, command, text):
 	import sys
