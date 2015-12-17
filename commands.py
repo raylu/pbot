@@ -10,11 +10,11 @@ import time
 import urllib
 
 import requests
-import oursql
+import psycopg2
 
 rs = requests.Session()
 rs.headers.update({'User-Agent': 'pbot'})
-db = oursql.connect(db='eve', user='eve', passwd='eve', autoreconnect=True)
+db = psycopg2.connect("dbname=eve user=eve")
 
 def reload(bot, target, nick, command, text):
 	import sys
@@ -55,9 +55,8 @@ def price_check(bot, target, nick, command, text):
 		return bid, ask, volume
 	def __item_info(curs, query):
 		curs.execute(
-				'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
-				(query,)
-				)
+				'SELECT "typeID", "typeName" FROM "invTypes" WHERE LOWER("typeName") LIKE %s',
+				(query.lower(),))
 		results = curs.fetchmany(3)
 		if len(results) == 1:
 			return results[0]
@@ -74,9 +73,8 @@ def price_check(bot, target, nick, command, text):
 		with db.cursor() as curs:
 			# exact match
 			curs.execute(
-					'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
-					(item_name,)
-					)
+					'SELECT "typeID", "typeName" FROM "invTypes" WHERE LOWER("typeName") LIKE %s',
+					(item_name.lower(),))
 			result = curs.fetchone()
 			if result:
 				return result
@@ -247,8 +245,8 @@ def python(code):
 					line = line[5:]
 				return line[:250]
 
-last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
-last_whelp_time = time.time()
+#last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
+#last_whelp_time = time.time()
 def whelp(bots):
 	from bot import STATE
 	import traceback
