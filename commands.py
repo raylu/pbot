@@ -9,8 +9,8 @@ import subprocess
 import time
 import urllib
 
-import requests
 import psycopg2
+import requests
 
 rs = requests.Session()
 rs.headers.update({'User-Agent': 'pbot'})
@@ -126,9 +126,9 @@ def jumps(bot, target, nick, command, text):
 		return
 	with db.cursor() as curs:
 		curs.execute('''
-				SELECT solarSystemName FROM mapSolarSystems
-				WHERE solarSystemName LIKE ? or solarSystemName LIKE ?
-				''', (split[0] + '%', split[1] + '%')
+				SELECT "solarSystemName" FROM "mapSolarSystems"
+				WHERE LOWER("solarSystemName") LIKE %s OR LOWER("solarSystemName") LIKE %s
+				''', (split[0].lower() + '%', split[1].lower() + '%')
 		)
 		results = list(map(operator.itemgetter(0), curs.fetchmany(2)))
 	query = [None, None]
