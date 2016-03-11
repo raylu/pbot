@@ -13,6 +13,8 @@ import time
 import requests
 import oursql
 
+from math import sqrt
+
 rs = requests.Session()
 rs.headers.update({'User-Agent': 'pbot'})
 db = oursql.connect(db='eve', user='eve', passwd='eve', autoreconnect=True)
@@ -220,6 +222,25 @@ def roll(bot, target, nick, command, text):
 		bot.say(target, result)
 	else:
 		bot.say(target, "%s; total: %d" % (result, sum(results)))
+
+def ly(bot,target, nick, command, text):	
+	split = text.split()
+	if len(split) != 2:
+		bot.say('usage: %s [from] [to]' % command)
+		return
+	with db.cursor() as curs:
+		curs.execute('''
+					SELECT x, y, z
+					FROM mapSolarSystems
+					WHERE lower(solarSystemName) LIKE %s
+					OR lower(solarSystemName) LIKE %s;
+					''', (split[0], split[1]))
+		result = curs.fetchmany(2)
+	try:
+		d = sqrt(sum([(a-b)**2 for a,b in zip(*result)]) ) / 9.4605284e15
+	except ValueError:
+		return
+	bot.say(target,"{0:.3f}".format(d))
 
 
 handlers = {
