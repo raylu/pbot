@@ -175,43 +175,40 @@ def roll(bot, target, nick, command, text):
 	result = split[1].split('=', 1)[1]
 	bot.say(target, "%s: %s = %s" % (nick, details, result))
 
-def ly(bot, target, nick, command, text):
+def lightyears(bot, target, nick, command, text):
 	split = [n + '%' for n in text.lower().split()]
 	if len(split) != 2:
 		bot.say(target, 'usage: %s [from] [to]' % (command))
 		return
+
 	with db.cursor() as curs:
 		curs.execute('''
-				SELECT x, y, z
-				FROM "mapSolarSystems"
-				WHERE lower("solarSystemName") LIKE %s
-				OR lower("solarSystemName") LIKE %s;
+				SELECT x, y, z FROM "mapSolarSystems"
+				WHERE LOWER("solarSystemName") LIKE %s OR LOWER("solarSystemName") LIKE %s;
 				''', split)
 		result = curs.fetchmany(2)
-
-	if len(result) == 2:
-		dist = 0
-		for d1, d2 in zip(result[0], result[1]):
-			dist += (d1-d2)**2
-		dist = sqrt(dist) / 9.4605284e15 # meters per lightyear
-		shipranges = {
-			'CAP:': 2.5, # jump range for all other ships
-			'BO:': 4.0, # blackops
-			'JF:': 5.0, # jump freighters
-		}
-		jdc = []
-		for ship, jumprange in shipranges.items():
-			jdc.append(ship)
-			for level in range(0,6):
-				if dist <= jumprange*(level*0.2+1):
-					jdc.append(str(level))
-					break
-			else:
-				jdc.append('N/A')
-		bot.say(target, '%.3fly, %s' % (dist,' '.join(jdc)))
-	else:
+	if len(result) != 2:
 		bot.say(target, 'ERROR: one or more systems not found!')
 		return
+
+	dist = 0
+	for d1, d2 in zip(result[0], result[1]):
+		dist += (d1 - d2)**2
+	dist = sqrt(dist) / 9.4605284e15 # meters to lightyears
+	ship_ranges = [
+		('CAP:', 2.5), # jump range for all other ships
+		('BO:', 4.0), # blackops
+		('JF:', 5.0), # jump freighters
+	]
+	jdc = []
+	for ship, jump_range in ship_ranges:
+		for level in range(0, 6):
+			if dist <= jump_range * (1 + level * 0.2):
+				jdc.append('%s %d' % (ship, level))
+				break
+		else:
+			jdc.append(ship + ' N/A')
+	bot.say(target, '%.3f ly, %s' % (dist,' '.join(jdc)))
 
 
 handlers = {
@@ -220,7 +217,7 @@ handlers = {
 	'reload': reload,
 	'calc': calc,
 	'roll': roll,
-	'ly' : ly,
+	'ly' : lightyears,
 }
 
 youtube_re = re.compile('((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
