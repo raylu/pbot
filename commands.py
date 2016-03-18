@@ -178,21 +178,24 @@ def roll(bot, target, nick, command, text):
 def lightyears(bot, target, nick, command, text):
 	split = [n + '%' for n in text.lower().split()]
 	if len(split) != 2:
-		bot.say(target, 'usage: %s [from] [to]' % (command))
+		bot.say(target, '%s: !%s [from] [to]' % (nick, command))
 		return
 
 	with db.cursor() as curs:
 		curs.execute('''
-				SELECT x, y, z FROM "mapSolarSystems"
-				WHERE LOWER("solarSystemName") LIKE %s OR LOWER("solarSystemName") LIKE %s;
+				SELECT "solarSystemName", x, y, z FROM "mapSolarSystems"
+				WHERE LOWER("solarSystemName") LIKE %s OR LOWER("solarSystemName") LIKE %s
 				''', split)
-		result = curs.fetchmany(2)
-	if len(result) != 2:
-		bot.say(target, 'ERROR: one or more systems not found!')
+		result = curs.fetchmany(6)
+	if len(result) < 2:
+		bot.say(target, nick + ': one or both systems not found')
+		return
+	elif len(result) > 2:
+		bot.say(target, nick + ': found too many systems: ' + ' '.join(map(operator.itemgetter(0), result)))
 		return
 
 	dist = 0
-	for d1, d2 in zip(result[0], result[1]):
+	for d1, d2 in zip(result[0][1:], result[1][1:]):
 		dist += (d1 - d2)**2
 	dist = sqrt(dist) / 9.4605284e15 # meters to lightyears
 	ship_ranges = [
@@ -208,7 +211,7 @@ def lightyears(bot, target, nick, command, text):
 				break
 		else:
 			jdc.append(ship + ' N/A')
-	bot.say(target, '%.3f ly, %s' % (dist,' '.join(jdc)))
+	bot.say(target, '%s ↔ %s: %.3f ly, %s' % (result[0][0], result[1][0], dist,' '.join(jdc)))
 
 
 handlers = {
