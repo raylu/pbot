@@ -232,6 +232,22 @@ def nodejs(bot, target, nick, command, text):
 			output = 'unknown error'
 	bot.say(target, '%s: %s' % (nick, output[:250]))
 
+def irb(bot, target, nick, command, text):
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', '',
+			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
+			'/usr/bin/irb', '-f', '--noprompt']
+	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+	stdout, _ = proc.communicate(text)
+	if proc.returncode == 109:
+		output = 'timed out after 2 seconds'
+	else:
+		try:
+			output = stdout.split('\n', 3)[2][:250]
+		except IndexError:
+			output = 'unknown error'
+	bot.say(target, '%s: %s' % (nick, output))
+
 handlers = {
 	'pc': price_check,
 	'jumps': jumps,
@@ -240,6 +256,7 @@ handlers = {
 	'roll': roll,
 	'ly' : lightyears,
 	'js' : nodejs,
+	'ruby' : irb,
 }
 
 youtube_re = re.compile('((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
