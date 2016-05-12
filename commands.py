@@ -213,6 +213,24 @@ def lightyears(bot, target, nick, command, text):
 			jdc.append(ship + ' N/A')
 	bot.say(target, '%s ↔ %s: %.3f ly, %s' % (result[0][0], result[1][0], dist,' '.join(jdc)))
 
+def nodejs(bot, target, nick, command, text):
+	cmd = ['../nsjail/nsjail', '-Mo', '--rlimit_as', '700', '--chroot', 'chroot',
+			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
+			'/usr/bin/nodejs', '--print', text]
+	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE, universal_newlines=True)
+	stdout, stderr = proc.communicate()
+	if proc.returncode == 0:
+		output = stdout.split('\n', 1)[0]
+	elif proc.returncode == 109:
+		output = 'timed out after 2 seconds'
+	else:
+		try:
+			output = stderr.split('\n', 5)[4]
+		except IndexError:
+			output = 'unknown error'
+	bot.say(target, '%s: %s' % (nick, output[:250]))
 
 handlers = {
 	'pc': price_check,
@@ -221,6 +239,7 @@ handlers = {
 	'calc': calc,
 	'roll': roll,
 	'ly' : lightyears,
+	'js' : nodejs,
 }
 
 youtube_re = re.compile('((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
