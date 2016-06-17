@@ -310,7 +310,7 @@ def python(code):
 		os.killpg(pypy.pid, signal.SIGKILL)
 		return 'timed out after 5 seconds'
 	errlines = stderr.split('\n')
-	if len(errlines) > 3:
+	if len(errlines) > 6:
 		for i in range(1, len(errlines)):
 			line = errlines[-i] # iterate backwards
 			if line:
