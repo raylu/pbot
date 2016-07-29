@@ -21,6 +21,8 @@ class Connection:
 			if e.errno is None: # recv timed out
 				return
 			raise
+		if not data:
+			raise Disconnected()
 		if self.last_buf is not None:
 			data = self.last_buf + data
 			self.last_buf = None
@@ -62,3 +64,7 @@ class Connection:
 			pass
 		self.socket.close()
 		self.socket = None
+		self.last_buf = None
+
+class Disconnected(Exception):
+	pass

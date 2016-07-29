@@ -59,6 +59,7 @@ class Bot:
 
 		self.handlers = {
 			'PING': self.handle_ping,
+			'PONG': self.handle_pong,
 			'376': self.handle_motd, # RPL_ENDOFMOTD
 			'422': self.handle_motd, # ERR_NOMOTD
 			'NOTICE': self.handle_notice,
@@ -111,8 +112,12 @@ class Bot:
 				except socket.error as e:
 					self.log(e)
 					self.disconnect()
+				except connection.Disconnected:
+					self.log('got empty buffer on recv')
+					self.disconnect()
 
 	def handle(self):
+		received = False
 		for line in self.conn.recv():
 			msg = ServerMessage(line)
 			handler = self.handlers.get(msg.command)
@@ -121,7 +126,9 @@ class Bot:
 					handler(msg)
 				except:
 					self.exception(line)
-		self.last_recv = time.time()
+			received = True
+		if received:
+			self.last_recv = time.time()
 
 	def check_disconnect(self):
 		time_since = time.time() - self.last_recv
@@ -165,6 +172,9 @@ class Bot:
 
 	def handle_ping(self, msg):
 		self.conn.send('PONG', msg.target)
+
+	def handle_pong(self, msg):
+		self.awaiting_pong = False
 
 	def handle_motd(self, msg):
 		self.state = STATE.UNIDENTIFIED
