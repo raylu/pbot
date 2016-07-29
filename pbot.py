@@ -5,13 +5,13 @@ if sys.argv[-1] == '-d':
 	from daemon import daemonize
 	daemonize()
 
-from bot import Bot
-import config
-import log
-
 import signal
 import threading
 import time
+
+from bot import Bot
+import config
+import log
 
 def quit(signum, frame):
 	for bot in bots:

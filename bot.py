@@ -1,8 +1,3 @@
-from connection import Connection
-import config
-import log
-import commands
-
 from collections import defaultdict
 import imp
 import os
@@ -10,6 +5,11 @@ import socket
 import sys
 import time
 import traceback
+
+import config
+import connection
+import log
+import commands
 
 os.stat_float_times(False)
 commands_mtime = os.stat('commands.py').st_mtime
@@ -97,7 +97,7 @@ class Bot:
 			self.last_recv = time.time()
 			self.awaiting_pong = False
 			if not self.conn:
-				self.conn = Connection()
+				self.conn = connection.Connection()
 			error = self.conn.connect(host, port)
 			if error:
 				self.log(error)

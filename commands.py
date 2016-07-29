@@ -1,6 +1,4 @@
-import config
-import log
-
+from math import sqrt
 import operator
 import os
 import re
@@ -12,7 +10,8 @@ import urllib
 import psycopg2
 import requests
 
-from math import sqrt
+import config
+import log
 
 rs = requests.Session()
 rs.headers.update({'User-Agent': 'pbot'})
@@ -211,7 +210,7 @@ def lightyears(bot, target, nick, command, text):
 				break
 		else:
 			jdc.append(ship + ' N/A')
-	bot.say(target, '%s ↔ %s: %.3f ly, %s' % (result[0][0], result[1][0], dist,' '.join(jdc)))
+	bot.say(target, '%s ↔ %s: %.3f ly, %s' % (result[0][0], result[1][0], dist, ' '.join(jdc)))
 
 def nodejs(bot, target, nick, command, text):
 	cmd = ['../nsjail/nsjail', '-Mo', '--rlimit_as', '700', '--chroot', 'chroot',
@@ -259,7 +258,7 @@ handlers = {
 	'ruby' : irb,
 }
 
-youtube_re = re.compile('((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
+youtube_re = re.compile(r'((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
 def youtube(bot, msg):
 	match = youtube_re.search(msg.text)
 	if match is None:
