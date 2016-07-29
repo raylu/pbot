@@ -56,6 +56,7 @@ class Bot:
 		self.conn = None
 		self.last_recv = None
 		self.awaiting_pong = False
+		self.connect_delay = 1
 
 		self.handlers = {
 			'PING': self.handle_ping,
@@ -116,6 +117,10 @@ class Bot:
 					self.log('got empty buffer on recv')
 					self.disconnect()
 
+			self.log('waiting %ds before attempting to reconnect' % self.connect_delay)
+			time.sleep(self.connect_delay)
+			self.connect_delay *= 2
+
 	def handle(self):
 		received = False
 		for line in self.conn.recv():
@@ -169,6 +174,7 @@ class Bot:
 		self.log('autojoining channels...')
 		for c in self.config.channels:
 			self.join(c)
+		self.connect_delay = 1
 
 	def handle_ping(self, msg):
 		self.conn.send('PONG', msg.target)
