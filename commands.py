@@ -247,15 +247,35 @@ def irb(bot, target, nick, command, text):
 			output = 'unknown error'
 	bot.say(target, '%s: %s' % (nick, output))
 
+def python3(bot, target, nick, command, text):
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', 'chroot',
+			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
+			'/usr/bin/python3', '-ISqi']
+	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE, universal_newlines=True)
+	stdout, stderr = proc.communicate(text)
+	if proc.returncode == 0:
+		if stderr != '>>> ... \n>>> \n':
+			output = stderr.split('\n')[-3]
+		else:
+			output = stdout.split('\n', 1)[0]
+	elif proc.returncode == 109:
+		output = 'timed out after 2 seconds'
+	else:
+		output = 'unknown error'
+	bot.say(target, '%s: %s' % (nick, output))
+
 handlers = {
 	'pc': price_check,
 	'jumps': jumps,
 	'reload': reload,
 	'calc': calc,
 	'roll': roll,
-	'ly' : lightyears,
-	'js' : nodejs,
-	'ruby' : irb,
+	'ly': lightyears,
+	'js': nodejs,
+	'ruby': irb,
+	'py3': python3,
 }
 
 youtube_re = re.compile(r'((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
