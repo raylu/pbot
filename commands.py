@@ -269,6 +269,16 @@ def python3(bot, target, nick, command, text):
 		output = 'unknown error'
 	bot.say(target, '%s: %s' % (nick, output))
 
+def unicode_search(bot, target, nick, command, text):
+	cmd = ['unicode', '--format', 'U+{ordc:04X} {name}\\n', '--max', '5', '--color', '0', text]
+	output = subprocess.check_output(cmd)
+	split = output.decode().split('\n')
+	if len(split) > 8: # text is something like '0000..ffff'
+		return
+	if split[-2].startswith('Too many characters to display,'):
+		split[-2] = split[-2][:split[-2].rfind(',')]
+	bot.say(target, '    '.join(split))
+
 handlers = {
 	'pc': price_check,
 	'jumps': jumps,
@@ -279,6 +289,7 @@ handlers = {
 	'js': nodejs,
 	'ruby': irb,
 	'py3': python3,
+	'unicode': unicode_search,
 }
 
 youtube_re = re.compile(r'((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
