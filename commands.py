@@ -257,7 +257,10 @@ def python3(bot, target, nick, command, text):
 	stdout, stderr = proc.communicate(text)
 	if proc.returncode == 0:
 		if stderr != '>>> ... \n>>> \n':
-			output = stderr.split('\n')[-3]
+			try:
+				output = stderr.split('\n')[-3]
+			except IndexError:
+				output = ''
 		else:
 			output = stdout.split('\n', 1)[0]
 	elif proc.returncode == 109:
