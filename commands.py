@@ -248,7 +248,7 @@ def irb(bot, target, nick, command, text):
 	bot.say(target, '%s: %s' % (nick, output))
 
 def python3(bot, target, nick, command, text):
-	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', 'chroot',
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', 'chroot', '-E', 'LANG=en_US.UTF-8',
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
 			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
 			'/usr/bin/python3', '-ISqi']
