@@ -56,7 +56,7 @@ class Bot:
 		self.conn = None
 		self.last_recv = None
 		self.awaiting_pong = False
-		self.connect_delay = 1
+		self.connect_delay = 1 # reconnect backoff in seconds
 
 		self.handlers = {
 			'PING': self.handle_ping,
@@ -119,7 +119,7 @@ class Bot:
 
 			self.log('waiting %ds before attempting to reconnect' % self.connect_delay)
 			time.sleep(self.connect_delay)
-			self.connect_delay *= 2
+			self.connect_delay = min(self.connect_delay * 2, 300)
 
 	def handle(self):
 		received = False
