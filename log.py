@@ -1,9 +1,8 @@
 from datetime import datetime
-import os
 import sys
 
 logfile = open('pbot.log', 'a')
-stdout = os.isatty(sys.stdout.fileno())
+stdout = sys.stdout.isatty()
 
 def write(text):
 	line = '%s %s' % (datetime.now(), text)
