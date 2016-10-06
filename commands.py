@@ -315,47 +315,6 @@ def youtube(bot, msg):
 	date = video['snippet']['publishedAt'].split('T', 1)[0]
 	bot.say(msg.target, "%s's video: %s, %s, %s" % (msg.nick, title, duration, date))
 
-def python_inline(bot, msg):
-	code = msg.text[4:]
-	bot.say(msg.target, '%s: %s' % (msg.nick, python(code)))
-
-def python_multiline(bot, msg):
-	lines = bot.scripts[msg.nick]
-	indent = 0
-	for i, line in enumerate(lines):
-		for j, char in enumerate(line):
-			if char != ' ':
-				break
-		if j < indent:
-			lines[i] = '\n' + line
-		indent = i
-	code = '\n'.join(bot.scripts[msg.nick]) + '\n\n'
-	bot.say(msg.target, '%s: %s' % (msg.nick, python(code)))
-
-PATH = os.environ['PATH']
-username = os.getlogin()
-PATH = ':'.join(filter(lambda p: username not in p, PATH.split(':'))) # filter out virtualenv
-def python(code):
-	pypy = subprocess.Popen(['pypy-sandbox'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-			stderr=subprocess.PIPE, env={'PATH': PATH}, universal_newlines=True, preexec_fn=os.setpgrp)
-	try:
-		stdout, stderr = pypy.communicate(code, 5)
-	except subprocess.TimeoutExpired:
-		os.killpg(pypy.pid, signal.SIGKILL)
-		return 'timed out after 5 seconds'
-	errlines = stderr.split('\n')
-	if len(errlines) > 6:
-		for i in range(1, len(errlines)):
-			line = errlines[-i] # iterate backwards
-			if line:
-				return line[:250]
-	else:
-		for line in stdout.split('\n'):
-			if line.startswith('>>>> '):
-				while line[:5] in ['>>>> ', '.... ']:
-					line = line[5:]
-				return line[:250]
-
 #last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
 #last_whelp_time = time.time()
 def whelp(bots):

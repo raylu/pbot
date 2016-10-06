@@ -68,8 +68,6 @@ class Bot:
 			'PRIVMSG': self.handle_privmsg,
 		}
 
-		self.scripts = defaultdict(list)
-
 	def __str__(self):
 		return '<Bot: %s/%s>' % (self.config.host, self.config.nick)
 
@@ -231,16 +229,7 @@ class Bot:
 				if handler:
 					handler(self, msg.target, msg.nick, command, text)
 			elif msg.text.startswith('>>> '):
-				commands.python_inline(self, msg)
-			elif msg.text.startswith('>>>>'):
-				if len(msg.text) == 4:
-					commands.python_multiline(self, msg)
-					del self.scripts[msg.nick]
-				elif msg.text[4] == ' ':
-					if len(self.scripts[msg.nick]) >= 16:
-						self.say(msg.target, '%s: script cannot be longer than 16 lines' % msg.nick)
-					else:
-						self.scripts[msg.nick].append(msg.text[5:])
+				commands.python3(self, msg.target, msg.nick, None, msg.text[4:])
 			else:
 				commands.youtube(self, msg)
 
