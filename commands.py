@@ -242,7 +242,8 @@ def irb(bot, target, nick, command, text):
 		output = 'timed out after 2 seconds'
 	else:
 		try:
-			output = stdout.split('\n', 3)[2][:250]
+			output = stdout.split('\n', 2)[2].lstrip('\n')
+			output = output.split('\n', 1)[0][:250]
 		except IndexError:
 			output = 'unknown error'
 	bot.say(target, '%s: %s' % (nick, output))
