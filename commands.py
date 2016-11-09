@@ -255,9 +255,9 @@ def python3(bot, target, nick, command, text):
 			'/usr/bin/python3', '-ISqi']
 	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE, universal_newlines=True)
-	stdout, stderr = proc.communicate(text)
+	stdout, stderr = proc.communicate(text + '\n')
 	if proc.returncode == 0:
-		if stderr != '>>> ... \n>>> \n':
+		if stderr != '>>> >>> \n':
 			try:
 				output = stderr.split('\n')[-3]
 			except IndexError:
