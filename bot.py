@@ -99,7 +99,7 @@ class Bot:
 				self.conn = connection.Connection()
 			error = self.conn.connect(host, port)
 			if error:
-				self.log(error)
+				self.log('initial connect error: %r' % error)
 				self.state = STATE.DISCONNECTED
 			else:
 				self.state = STATE.CONNECTING
@@ -109,7 +109,7 @@ class Bot:
 					self.handle()
 					self.check_disconnect()
 				except socket.error as e:
-					self.log(e)
+					self.log('socket error: %r' % e)
 					self.disconnect()
 				except connection.Disconnected:
 					self.log('got empty buffer on recv')
