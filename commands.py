@@ -271,12 +271,14 @@ def python3(bot, target, nick, command, text):
 	bot.say(target, '%s: %s' % (nick, output))
 
 def unicode_search(bot, target, nick, command, text):
-	cmd = ['unicode', '--format', 'U+{ordc:04X} {name}\\n', '--max', '5', '--color', '0', text]
+	cmd = ['unicode', '--format', '{pchar} U+{ordc:04X} {name} (UTF-8: {utf8})\\n', '--max', '5', '--color', '0', text]
 	output = subprocess.check_output(cmd)
-	split = output.decode().split('\n')
+	split = output.decode('utf-8').split('\n')
 	if len(split) > 8: # text is something like '0000..ffff'
 		return
-	if split[-2].startswith('Too many characters to display,'):
+	elif len(split) == 1:
+		bot.say(target, '%s: nothing found' % nick)
+	elif split[-2].startswith('Too many characters to display,'):
 		split[-2] = split[-2][:split[-2].rfind(',')]
 	bot.say(target, '    '.join(split))
 
