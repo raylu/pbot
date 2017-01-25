@@ -2,6 +2,7 @@ from math import sqrt
 import operator
 import os
 import re
+import shlex
 import signal
 import subprocess
 import time
@@ -282,6 +283,10 @@ def unicode_search(bot, target, nick, command, text):
 		split[-2] = split[-2][:split[-2].rfind(',')]
 	bot.say(target, '    '.join(split))
 
+def ddate(bot, target, nick, command, text):
+	output = subprocess.check_output([command] + shlex.split(text), universal_newlines=True)
+	bot.say(target, output.replace('\n', '    '))
+
 handlers = {
 	'pc': price_check,
 	'jumps': jumps,
@@ -293,6 +298,7 @@ handlers = {
 	'ruby': irb,
 	'py3': python3,
 	'unicode': unicode_search,
+	'ddate': ddate,
 }
 
 youtube_re = re.compile(r'((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
