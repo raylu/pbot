@@ -217,7 +217,7 @@ def nodejs(bot, target, nick, command, text):
 	cmd = ['../nsjail/nsjail', '-Mo', '--rlimit_as', '700', '--chroot', 'chroot',
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
 			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
-			'/usr/bin/nodejs', '--print', text]
+			'/usr/bin/nodejs', '--use_strict', '--print', text]
 	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE, universal_newlines=True)
 	stdout, stderr = proc.communicate()
