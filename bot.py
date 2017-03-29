@@ -228,8 +228,6 @@ class Bot:
 				handler = commands.handlers.get(command)
 				if handler:
 					handler(self, msg.target, msg.nick, command, text)
-			elif msg.text.startswith('>>> '):
-				commands.python3(self, msg.target, msg.nick, None, msg.text[4:])
 			else:
 				commands.youtube(self, msg)
 
