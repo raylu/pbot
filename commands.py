@@ -249,6 +249,29 @@ def irb(bot, target, nick, command, text):
 			output = 'unknown error'
 	bot.say(target, '%s: %s' % (nick, output))
 
+def python2(bot, target, nick, command, text):
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', 'chroot', '-E', 'LANG=en_US.UTF-8',
+			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
+			'/usr/bin/python2', '-ESsi']
+	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE, universal_newlines=True)
+	stdout, stderr = proc.communicate(text + '\n')
+	if proc.returncode == 0:
+		stderr = stderr.split('\n', 2)[2] # ignore first 2 lines (version and compiler; python3 has -q for this)
+		if stderr not in ['>>> >>> \n', '>>> ... \n>>> \n']:
+			try:
+				output = stderr.split('\n')[-3]
+			except IndexError:
+				output = ''
+		else:
+			output = stdout.split('\n', 1)[0]
+	elif proc.returncode == 109:
+		output = 'timed out after 2 seconds'
+	else:
+		output = 'unknown error'
+	bot.say(target, '%s: %s' % (nick, output))
+
 def python3(bot, target, nick, command, text):
 	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', 'chroot', '-E', 'LANG=en_US.UTF-8',
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
@@ -258,7 +281,7 @@ def python3(bot, target, nick, command, text):
 			stderr=subprocess.PIPE, universal_newlines=True)
 	stdout, stderr = proc.communicate(text + '\n')
 	if proc.returncode == 0:
-		if stderr != '>>> >>> \n':
+		if stderr not in ['>>> >>> \n', '>>> ... \n>>> \n']:
 			try:
 				output = stderr.split('\n')[-3]
 			except IndexError:
@@ -296,6 +319,7 @@ handlers = {
 	'ly': lightyears,
 	'js': nodejs,
 	'ruby': irb,
+	'py2': python2,
 	'py3': python3,
 	'unicode': unicode_search,
 	'ddate': ddate,
