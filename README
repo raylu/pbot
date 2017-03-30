@@ -12,6 +12,16 @@ Installation:
 	Copy config.yaml.example to config.yaml. Edit.
 	`./pbot.py` (run with -d to daemonize)
 
+Code evaluator:
+	Make the nsjail directory a sibling of the pbot directory:
+		`cd ..`
+		`git clone --recursive git://github.com/google/nsjail.git`
+		`cd nsjail`
+		`make`
+	Set up an NSJAIL memory cgroup:
+		`sudo mkdir /sys/fs/cgroup/memory/NSJAIL`
+		`sudo chown -R $USER: /sys/fs/cgroup/memory/NSJAIL`
+
 EVE price checker:
 	Download the latest invTypes.sql.bz2 file from https://www.fuzzwork.co.uk/dump/
 	Install mysql-server (or mariadb-server)

@@ -1,6 +1,7 @@
 from math import sqrt
 import operator
 import os
+from os import path
 import re
 import shlex
 import signal
@@ -16,7 +17,8 @@ import log
 
 rs = requests.Session()
 rs.headers.update({'User-Agent': 'pbot'})
-db = psycopg2.connect(config.settings['eve_dsn'])
+if config.settings['eve_dsn'] is not None:
+	db = psycopg2.connect(config.settings['eve_dsn'])
 
 def reload(bot, target, nick, command, text):
 	import sys
@@ -213,34 +215,47 @@ def lightyears(bot, target, nick, command, text):
 			jdc.append(ship + ' N/A')
 	bot.say(target, '%s ↔ %s: %.3f ly, %s' % (result[0][0], result[1][0], dist, ' '.join(jdc)))
 
+chroot_dir = path.join(path.dirname(path.abspath(__file__)), 'chroot')
+MB = 1024 * 1024
+
 def nodejs(bot, target, nick, command, text):
-	cmd = ['../nsjail/nsjail', '-Mo', '--rlimit_as', '700', '--chroot', 'chroot',
+	cmd = ['../nsjail/nsjail', '-Mo', '--rlimit_as', '700', '--chroot', chroot_dir,
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
-			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
+			'--cgroup_mem_max', str(50 * MB), '--quiet', '--',
 			'/usr/bin/nodejs', '--print', text]
 	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE, universal_newlines=True)
 	stdout, stderr = proc.communicate()
+	# https://github.com/nodejs/node/blob/master/doc/api/process.md#exit-codes is all lies
 	if proc.returncode == 0:
 		output = stdout.split('\n', 1)[0]
 	elif proc.returncode == 109:
-		output = 'timed out after 2 seconds'
+		output = 'timed out' # node catches OOM and exits 111; see below
 	else:
+		split = stderr.split('\n', 5)
 		try:
-			output = stderr.split('\n', 5)[4]
+			output = split[4]
 		except IndexError:
-			output = 'unknown error'
+			if split[0].startswith('FATAL ERROR:'):
+				# often returncode 111 when OOM
+				# curiously, the doc linked above claims a fatal error will exit 5
+				# ENOMEM is 12. 128 - 5 - 12 = 111
+				output = split[0]
+			else:
+				output = 'unknown error'
 	bot.say(target, '%s: %s' % (nick, output[:250]))
 
 def irb(bot, target, nick, command, text):
 	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', '',
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
-			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
+			'--cgroup_mem_max', str(50 * MB), '--quiet', '--',
 			'/usr/bin/irb', '-f', '--noprompt']
 	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
 	stdout, _ = proc.communicate(text)
 	if proc.returncode == 109:
-		output = 'timed out after 2 seconds'
+		output = 'timed out or memory limit exceeded'
 	else:
 		try:
 			output = stdout.split('\n', 2)[2].lstrip('\n')
@@ -250,9 +265,10 @@ def irb(bot, target, nick, command, text):
 	bot.say(target, '%s: %s' % (nick, output))
 
 def python2(bot, target, nick, command, text):
-	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', 'chroot', '-E', 'LANG=en_US.UTF-8',
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', chroot_dir, '-E', 'LANG=en_US.UTF-8',
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
-			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
+			'--cgroup_mem_max', str(50 * MB), '--quiet', '--',
 			'/usr/bin/python2', '-ESsi']
 	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE, universal_newlines=True)
@@ -267,15 +283,16 @@ def python2(bot, target, nick, command, text):
 		else:
 			output = stdout.split('\n', 1)[0]
 	elif proc.returncode == 109:
-		output = 'timed out after 2 seconds'
+		output = 'timed out or memory limit exceeded'
 	else:
 		output = 'unknown error'
-	bot.say(target, '%s: %s' % (nick, output))
+	bot.say(target, '%s: %s' % (nick, output[:250]))
 
 def python3(bot, target, nick, command, text):
-	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', 'chroot', '-E', 'LANG=en_US.UTF-8',
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', chroot_dir, '-E', 'LANG=en_US.UTF-8',
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
-			'--time_limit', '2', '--disable_proc', '--iface_no_lo', '--',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
+			'--cgroup_mem_max', str(50 * MB), '--quiet', '--',
 			'/usr/bin/python3', '-ISqi']
 	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE, universal_newlines=True)
@@ -289,10 +306,10 @@ def python3(bot, target, nick, command, text):
 		else:
 			output = stdout.split('\n', 1)[0]
 	elif proc.returncode == 109:
-		output = 'timed out after 2 seconds'
+		output = 'timed out or memory limit exceeded'
 	else:
 		output = 'unknown error'
-	bot.say(target, '%s: %s' % (nick, output))
+	bot.say(target, '%s: %s' % (nick, output[:250]))
 
 def unicode_search(bot, target, nick, command, text):
 	cmd = ['unicode', '--format', '{pchar} U+{ordc:04X} {name} (UTF-8: {utf8})\\n', '--max', '5', '--color', '0', text]
