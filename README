@@ -18,6 +18,9 @@ Code evaluator:
 		`git clone --recursive git://github.com/google/nsjail.git`
 		`cd nsjail`
 		`make`
+	If /sys/fs/cgroup/memory doesn't exist:
+		`sudo mkdir /sys/fs/cgroup/memory`
+		`sudo mount -t cgroup memory -o memory /sys/fs/cgroup/memory`
 	Set up an NSJAIL memory cgroup:
 		`sudo mkdir /sys/fs/cgroup/memory/NSJAIL`
 		`sudo chown -R $USER: /sys/fs/cgroup/memory/NSJAIL`
