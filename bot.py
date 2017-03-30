@@ -66,6 +66,7 @@ class Bot:
 			'NOTICE': self.handle_notice,
 			'MODE': self.handle_mode,
 			'PRIVMSG': self.handle_privmsg,
+			'INVITE': self.handle_invite,
 		}
 
 	def __str__(self):
@@ -237,3 +238,7 @@ class Bot:
 			command = split[0]
 			if command == 'VERSION':
 				self.ctcp_reply(msg.nick, 'VERSION', 'pbot https://github.com/raylu/pbot')
+
+	def handle_invite(self, msg):
+		self.log('joining %s on invite from %s' % (msg.text, msg.nick))
+		self.join(msg.text)
