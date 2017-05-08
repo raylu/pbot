@@ -324,22 +324,33 @@ def unicode_search(bot, target, nick, command, text):
 	bot.say(target, '    '.join(split))
 
 def ddate(bot, target, nick, command, text):
-	output = subprocess.check_output([command] + shlex.split(text), universal_newlines=True)
+	output = subprocess.check_output(['ddate'] + shlex.split(text), universal_newlines=True)
 	bot.say(target, output.replace('\n', '    '))
+
+def units(bot, target, nick, command, text):
+	command = ['units', '--compact', '--one-line', '--quiet'] + text.split(' in ', 1)
+	proc = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True)
+	output, _ = proc.communicate()
+	bot.say(target, output.replace('\n', '  ')[:250])
 
 handlers = {
 	'pc': price_check,
 	'jumps': jumps,
+	'ly': lightyears,
+
 	'reload': reload,
+
 	'calc': calc,
 	'roll': roll,
-	'ly': lightyears,
+
 	'js': nodejs,
 	'ruby': irb,
 	'py2': python2,
 	'py3': python3,
+
 	'unicode': unicode_search,
 	'ddate': ddate,
+	'units': units,
 }
 
 youtube_re = re.compile(r'((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
