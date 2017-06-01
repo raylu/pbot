@@ -376,6 +376,21 @@ def youtube(bot, msg):
 	date = video['snippet']['publishedAt'].split('T', 1)[0]
 	bot.say(msg.target, "%s's video: %s, %s, %s" % (msg.nick, title, duration, date))
 
+pastebin_re = re.compile(r'pastebin.com\/([a-zA-z0-9_].*)')
+def cpypt(bot, msg):
+	match = pastebin_re.search(msg.text)
+	if match is None:
+		return
+	pastebin_id = match.group(1)
+	response = rs.get('https://pastebin.com/raw/%s' % pastebin_id, params={})
+	if response.status_code == 404:
+		bot.say(msg.target, '%s: not a real pastebin' % msg.nick)
+		return
+	response = rs.post('https://cpy.pt/', data={'paste': response.text, 'ttl': '730', 'raw': 'false'})
+	response.raise_for_status()
+	paste_url = response.text.split(' ', 1)[0]
+	bot.say(msg.target, '%s: %s' % (msg.nick, paste_url))
+
 #last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
 #last_whelp_time = time.time()
 def whelp(bots):
