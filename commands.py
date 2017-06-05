@@ -376,15 +376,15 @@ def youtube(bot, msg):
 	date = video['snippet']['publishedAt'].split('T', 1)[0]
 	bot.say(msg.target, "%s's video: %s, %s, %s" % (msg.nick, title, duration, date))
 
-pastebin_re = re.compile(r'pastebin.com\/([a-zA-z0-9_].*)')
+pastebin_re = re.compile(r'pastebin.com\/(raw\/)?([a-zA-z0-9_]*)')
 def cpypt(bot, msg):
 	match = pastebin_re.search(msg.text)
 	if match is None:
 		return
-	pastebin_id = match.group(1)
-	response = rs.get('https://pastebin.com/raw/%s' % pastebin_id, params={})
-	if response.status_code == 404:
-		bot.say(msg.target, '%s: not a real pastebin' % msg.nick)
+	pastebin_id = match.group(2)
+	response = rs.get('https://pastebin.com/raw/%s' % pastebin_id, allow_redirects=False)
+	if response.status_code != 200:
+		bot.say(msg.target, '%s: error repasting %s' % (msg.nick, pastebin_id))
 		return
 	response = rs.post('https://cpy.pt/', data={'paste': response.text, 'ttl': '730', 'raw': 'false'})
 	response.raise_for_status()
