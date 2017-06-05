@@ -199,6 +199,10 @@ class Bot:
 			elif msg.nick and msg.nick.upper() == 'NICKSERV':
 				self.say(msg.nick, 'IDENTIFY ' + self.config.nickserv)
 				self.state = STATE.IDENTIFYING
+		elif msg.nick and msg.nick.upper() == 'NICKSERV' and msg.text.startswith('You are now identified for'):
+			self.state = STATE.IDENTIFIED
+			self.log('nickserv accepted identification')
+			self.__join_channels()
 
 	def handle_mode(self, msg):
 		if msg.target == self.config.nick:
