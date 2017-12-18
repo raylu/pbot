@@ -4,6 +4,7 @@ class BotConfig:
 	attrs = frozenset([
 		'host',
 		'port',
+		'use_ssl',
 		'nick',
 		'user',
 		'nickserv',

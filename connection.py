@@ -1,5 +1,6 @@
 import errno
 import socket
+import ssl
 
 socket.setdefaulttimeout(10)
 
@@ -35,11 +36,13 @@ class Connection:
 		if last:
 			self.last_buf = last
 
-	def connect(self, host, port):
+	def connect(self, host, port, use_ssl):
 		if socket.has_ipv6:
 			self.socket = socket.socket(socket.AF_INET6)
 		else:
 			self.socket = socket.socket(socket.AF_INET)
+		if use_ssl:
+			self.socket = ssl.wrap_socket(self.socket)
 		error = self.__connect(host, port)
 		if socket.has_ipv6 and (error == errno.ENETUNREACH or isinstance(error, socket.gaierror)):
 			# tried ipv6 but we have no ipv6 connectivity or hostname doesn't have AAAA record

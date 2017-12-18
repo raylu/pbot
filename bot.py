@@ -91,6 +91,7 @@ class Bot:
 	def connect(self):
 		host = self.config.host
 		port = self.config.port
+		use_ssl = self.config.use_ssl
 
 		while True:
 			self.log('connecting to port %d...' % port)
@@ -98,7 +99,7 @@ class Bot:
 			self.awaiting_pong = False
 			if not self.conn:
 				self.conn = connection.Connection()
-			error = self.conn.connect(host, port)
+			error = self.conn.connect(host, port, use_ssl)
 			if error:
 				self.log('initial connect error: %r' % error)
 				self.state = STATE.DISCONNECTED

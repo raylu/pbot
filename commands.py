@@ -15,8 +15,6 @@ import requests
 import config
 import log
 
-from math import sqrt
-
 rs = requests.Session()
 rs.headers.update({'User-Agent': 'pbot'})
 if config.settings['eve_dsn'] is not None:
