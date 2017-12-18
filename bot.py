@@ -1,14 +1,15 @@
-from connection import Connection
-import config
-import log
-import commands
-
 from collections import defaultdict
 import imp
 import os
+import socket
 import sys
 import time
 import traceback
+
+import config
+import connection
+import log
+import commands
 
 os.stat_float_times(False)
 commands_mtime = os.stat('commands.py').st_mtime
@@ -55,17 +56,18 @@ class Bot:
 		self.conn = None
 		self.last_recv = None
 		self.awaiting_pong = False
+		self.connect_delay = 1 # reconnect backoff in seconds
 
 		self.handlers = {
 			'PING': self.handle_ping,
+			'PONG': self.handle_pong,
 			'376': self.handle_motd, # RPL_ENDOFMOTD
 			'422': self.handle_motd, # ERR_NOMOTD
 			'NOTICE': self.handle_notice,
 			'MODE': self.handle_mode,
 			'PRIVMSG': self.handle_privmsg,
+			'INVITE': self.handle_invite,
 		}
-
-		self.scripts = defaultdict(list)
 
 	def __str__(self):
 		return '<Bot: %s/%s>' % (self.config.host, self.config.nick)
@@ -89,20 +91,37 @@ class Bot:
 	def connect(self):
 		host = self.config.host
 		port = self.config.port
-		self.log('connecting to port %d...' % port)
-		self.last_recv = time.time()
-		self.awaiting_pong = False
-		if not self.conn:
-			self.conn = Connection()
-		fd, error = self.conn.connect(host, port)
-		if error:
-			self.log(error)
-			self.state = STATE.DISCONNECTED
-		else:
-			self.state = STATE.CONNECTING
-		return fd
+
+		while True:
+			self.log('connecting to port %d...' % port)
+			self.last_recv = time.time()
+			self.awaiting_pong = False
+			if not self.conn:
+				self.conn = connection.Connection()
+			error = self.conn.connect(host, port)
+			if error:
+				self.log('initial connect error: %r' % error)
+				self.state = STATE.DISCONNECTED
+			else:
+				self.state = STATE.CONNECTING
+
+			while self.state != STATE.DISCONNECTED:
+				try:
+					self.handle()
+					self.check_disconnect()
+				except socket.error as e:
+					self.log('socket error: %r' % e)
+					self.disconnect()
+				except connection.Disconnected:
+					self.log('got empty buffer on recv')
+					self.disconnect()
+
+			self.log('waiting %ds before attempting to reconnect' % self.connect_delay)
+			time.sleep(self.connect_delay)
+			self.connect_delay = min(self.connect_delay * 2, 300)
 
 	def handle(self):
+		received = False
 		for line in self.conn.recv():
 			msg = ServerMessage(line)
 			handler = self.handlers.get(msg.command)
@@ -111,15 +130,16 @@ class Bot:
 					handler(msg)
 				except:
 					self.exception(line)
-		self.last_recv = time.time()
+			received = True
+		if received:
+			self.last_recv = time.time()
 
-	def check_disconnect(self, ts):
-		time_since = ts - self.last_recv
+	def check_disconnect(self):
+		time_since = time.time() - self.last_recv
 		ping_timeout_wait = config.PING_INTERVAL + config.PING_TIMEOUT
 		if time_since > ping_timeout_wait:
 			self.log('no reply from server in %ds' % ping_timeout_wait)
 			self.disconnect()
-			return True
 		elif time_since > config.PING_INTERVAL and not self.awaiting_pong and self.state == STATE.IDENTIFIED:
 			# don't let the server's reply to ping reset last_recv unless we're fully
 			# identified lest we get stuck forever in a partially-connected state
@@ -153,9 +173,13 @@ class Bot:
 		self.log('autojoining channels...')
 		for c in self.config.channels:
 			self.join(c)
+		self.connect_delay = 1
 
 	def handle_ping(self, msg):
 		self.conn.send('PONG', msg.target)
+
+	def handle_pong(self, msg):
+		self.awaiting_pong = False
 
 	def handle_motd(self, msg):
 		self.state = STATE.UNIDENTIFIED
@@ -175,6 +199,10 @@ class Bot:
 			elif msg.nick and msg.nick.upper() == 'NICKSERV':
 				self.say(msg.nick, 'IDENTIFY ' + self.config.nickserv)
 				self.state = STATE.IDENTIFYING
+		elif msg.nick and msg.nick.upper() == 'NICKSERV' and msg.text.startswith('You are now identified for'):
+			self.state = STATE.IDENTIFIED
+			self.log('nickserv accepted identification')
+			self.__join_channels()
 
 	def handle_mode(self, msg):
 		if msg.target == self.config.nick:
@@ -205,19 +233,9 @@ class Bot:
 				handler = commands.handlers.get(command)
 				if handler:
 					handler(self, msg.target, msg.nick, command, text)
-			elif msg.text.startswith('>>> '):
-				commands.python_inline(self, msg)
-			elif msg.text.startswith('>>>>'):
-				if len(msg.text) == 4:
-					commands.python_multiline(self, msg)
-					del self.scripts[msg.nick]
-				elif msg.text[4] == ' ':
-					if len(self.scripts[msg.nick]) >= 16:
-						bot.say(msg.target, '%s: script cannot be longer than 16 lines' % msg.nick)
-					else:
-						self.scripts[msg.nick].append(msg.text[5:])
 			else:
 				commands.youtube(self, msg)
+				commands.cpypt(self, msg)
 
 	def handle_ctcp(self, msg):
 		if msg.target == self.config.nick:
@@ -225,3 +243,7 @@ class Bot:
 			command = split[0]
 			if command == 'VERSION':
 				self.ctcp_reply(msg.nick, 'VERSION', 'pbot https://github.com/raylu/pbot')
+
+	def handle_invite(self, msg):
+		self.log('joining %s on invite from %s' % (msg.text, msg.nick))
+		self.join(msg.text)

@@ -1,23 +1,26 @@
-import config
-import log
-
-import json
+from math import sqrt
 import operator
 import os
-import random
+from os import path
 import re
+import shlex
 import signal
 import subprocess
 import time
+import urllib
 
+import psycopg2
 import requests
-import oursql
+
+import config
+import log
 
 from math import sqrt
 
 rs = requests.Session()
 rs.headers.update({'User-Agent': 'pbot'})
-db = oursql.connect(db='eve', user='eve', passwd='eve', autoreconnect=True)
+if config.settings['eve_dsn'] is not None:
+	db = psycopg2.connect(config.settings['eve_dsn'])
 
 def reload(bot, target, nick, command, text):
 	import sys
@@ -58,9 +61,8 @@ def price_check(bot, target, nick, command, text):
 		return bid, ask, volume
 	def __item_info(curs, query):
 		curs.execute(
-				'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
-				(query,)
-				)
+				'SELECT "typeID", "typeName" FROM "invTypes" WHERE LOWER("typeName") LIKE %s',
+				(query.lower(),))
 		results = curs.fetchmany(3)
 		if len(results) == 1:
 			return results[0]
@@ -77,9 +79,8 @@ def price_check(bot, target, nick, command, text):
 		with db.cursor() as curs:
 			# exact match
 			curs.execute(
-					'SELECT typeID, typeName FROM invTypes WHERE typeName LIKE ?',
-					(item_name,)
-					)
+					'SELECT "typeID", "typeName" FROM "invTypes" WHERE LOWER("typeName") LIKE %s',
+					(item_name.lower(),))
 			result = curs.fetchone()
 			if result:
 				return result
@@ -131,9 +132,9 @@ def jumps(bot, target, nick, command, text):
 		return
 	with db.cursor() as curs:
 		curs.execute('''
-				SELECT solarSystemName FROM mapSolarSystems
-				WHERE solarSystemName LIKE ? or solarSystemName LIKE ?
-				''', (split[0] + '%', split[1] + '%')
+				SELECT "solarSystemName" FROM "mapSolarSystems"
+				WHERE LOWER("solarSystemName") LIKE %s OR LOWER("solarSystemName") LIKE %s
+				''', (split[0].lower() + '%', split[1].lower() + '%')
 		)
 		results = list(map(operator.itemgetter(0), curs.fetchmany(2)))
 	query = [None, None]
@@ -164,94 +165,198 @@ def jumps(bot, target, nick, command, text):
 		jumps_split.append(j_str)
 	bot.say(target, '%d jumps: %s' % (len(jumps), ', '.join(jumps_split)))
 
-entity_re = re.compile(r'&(#?)(x?)(\w+);')
 def calc(bot, target, nick, command, text):
-	import codecs
-	import html.entities
-	def substitute_entity(match):
-		ent = match.group(3)
-		if match.group(1) == "#":
-			if match.group(2) == '':
-				return chr(int(ent))
-			elif match.group(2) == 'x':
-				return chr(int('0x'+ent, 16))
-		else:
-			cp = html.entities.name2codepoint.get(ent)
-			if cp:
-				return chr(cp)
-			return match.group()
-	def decode_htmlentities(string):
-		return entity_re.subn(substitute_entity, string)[0]
-
-	if not text:
-		return
-	response = rs.get('http://www.wolframalpha.com/input/', params={'i': text}).text
-	matches = re.findall('context\.jsonArray\.popups\.pod_....\.push\((.*)\);', response)
-	if len(matches) < 2:
-		bot.say(target, nick + ': Error calculating.')
-		return
-	input_interpretation = json.loads(matches[0])['stringified']
-	result = json.loads(matches[1])['stringified']
-	output = '%s = %s' % (input_interpretation, result)
-	output = output.replace('\u00a0', ' ') # replace nbsp with space
-	output = codecs.getdecoder('unicode_escape')(output)[0]
-	output = re.subn('<sup>(.*)</sup>', r'^(\1)', output)[0]
-	output = decode_htmlentities(output)
-	bot.say(target, '%s: %s' % (nick, output))
+	response = rs.get('https://www.calcatraz.com/calculator/api', params={'c': text})
+	bot.say(target, '%s: %s' % (nick, response.text.rstrip()))
 
 def roll(bot, target, nick, command, text):
-	dice = 1
-	size = 6
+	if not text:
+		text = '1d6'
+	response = rs.get('https://rolz.org/api/?' + urllib.parse.quote_plus(text))
+	split = response.text.split('\n')
+	details = split[2].split('=', 1)[1].strip()
+	details = details.replace(' +', ' + ').replace(' +  ', ' + ')
+	result = split[1].split('=', 1)[1]
+	bot.say(target, "%s: %s = %s" % (nick, details, result))
 
-	split = text.split('d', 1)
-
-	if len(split) == 2:
-		try:
-			dice = int(split[0])
-			size = int(split[1])
-		except ValueError:
-			bot.say(target, 'usage: ' + 'roll [1d6]')
-
-	if not (1 <= dice <= 10) or not (1 < size <= 100):
-		bot.say(target, nick + ': Valid: 1d2 to 10d100')
-		return
-
-	results = [random.randint(1, size) for i in range(dice)]
-	result = "%dd%d: " % (dice, size) + ', '.join(str(i) for i in results)
-	if dice == 1:
-		bot.say(target, result)
-	else:
-		bot.say(target, "%s; total: %d" % (result, sum(results)))
-
-def ly(bot,target, nick, command, text):	
-	split = text.split()
+def lightyears(bot, target, nick, command, text):
+	split = [n + '%' for n in text.lower().split()]
 	if len(split) != 2:
-		bot.say('usage: %s [from] [to]' % command)
+		bot.say(target, '%s: !%s [from] [to]' % (nick, command))
 		return
+
 	with db.cursor() as curs:
 		curs.execute('''
-					SELECT x, y, z
-					FROM mapSolarSystems
-					WHERE lower(solarSystemName) LIKE %s
-					OR lower(solarSystemName) LIKE %s;
-					''', (split[0], split[1]))
-		result = curs.fetchmany(2)
-	try:
-		d = sqrt(sum([(a-b)**2 for a,b in zip(*result)]) ) / 9.4605284e15
-	except ValueError:
+				SELECT "solarSystemName", x, y, z FROM "mapSolarSystems"
+				WHERE LOWER("solarSystemName") LIKE %s OR LOWER("solarSystemName") LIKE %s
+				''', split)
+		result = curs.fetchmany(6)
+	if len(result) < 2:
+		bot.say(target, nick + ': one or both systems not found')
 		return
-	bot.say(target,"{0:.3f}".format(d))
+	elif len(result) > 2:
+		bot.say(target, nick + ': found too many systems: ' + ' '.join(map(operator.itemgetter(0), result)))
+		return
 
+	dist = 0
+	for d1, d2 in zip(result[0][1:], result[1][1:]):
+		dist += (d1 - d2)**2
+	dist = sqrt(dist) / 9.4605284e15 # meters to lightyears
+	ship_ranges = [
+		('CAP:', 3.5), # jump range for all other ships
+		('BO:', 4.0), # blackops
+		('JF:', 5.0), # jump freighters
+		('SUP:', 3.0), # supers
+	]
+	jdc = []
+	for ship, jump_range in ship_ranges:
+		for level in range(0, 6):
+			if dist <= jump_range * (1 + level * 0.2):
+				jdc.append('%s %d' % (ship, level))
+				break
+		else:
+			jdc.append(ship + ' N/A')
+	bot.say(target, '%s ↔ %s: %.3f ly, %s' % (result[0][0], result[1][0], dist, ' '.join(jdc)))
+
+chroot_dir = path.join(path.dirname(path.abspath(__file__)), 'chroot')
+MB = 1024 * 1024
+
+def nodejs(bot, target, nick, command, text):
+	cmd = ['../nsjail/nsjail', '-Mo', '--rlimit_as', '700', '--chroot', chroot_dir,
+			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
+			'--cgroup_mem_max', str(50 * MB), '--cgroup_pids_max', '1', '--quiet', '--',
+			'/usr/bin/nodejs', '--print', text]
+	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE, universal_newlines=True)
+	stdout, stderr = proc.communicate()
+	# https://github.com/nodejs/node/blob/master/doc/api/process.md#exit-codes is all lies
+	if proc.returncode == 0:
+		output = stdout.split('\n', 1)[0]
+	elif proc.returncode == 109:
+		output = 'timed out' # node catches OOM and exits 111; see below
+	else:
+		split = stderr.split('\n', 5)
+		try:
+			output = split[4]
+		except IndexError:
+			if split[0].startswith('FATAL ERROR:'):
+				# often returncode 111 when OOM
+				# curiously, the doc linked above claims a fatal error will exit 5
+				# ENOMEM is 12. 128 - 5 - 12 = 111
+				output = split[0]
+			else:
+				output = 'unknown error'
+	bot.say(target, '%s: %s' % (nick, output[:250]))
+
+def irb(bot, target, nick, command, text):
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', '',
+			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
+			'--cgroup_mem_max', str(50 * MB), '--cgroup_pids_max', '1', '--quiet', '--',
+			'/usr/bin/irb', '-f', '--noprompt']
+	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+	stdout, _ = proc.communicate(text)
+	if proc.returncode == 109:
+		output = 'timed out or memory limit exceeded'
+	else:
+		try:
+			output = stdout.split('\n', 2)[2].lstrip('\n')
+			output = output.split('\n', 1)[0][:250]
+		except IndexError:
+			output = 'unknown error'
+	bot.say(target, '%s: %s' % (nick, output))
+
+def python2(bot, target, nick, command, text):
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', chroot_dir, '-E', 'LANG=en_US.UTF-8',
+			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
+			'--cgroup_mem_max', str(50 * MB), '--cgroup_pids_max', '1', '--quiet', '--',
+			'/usr/bin/python2', '-ESsi']
+	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE, universal_newlines=True)
+	stdout, stderr = proc.communicate(text + '\n')
+	if proc.returncode == 0:
+		stderr = stderr.split('\n', 2)[2] # ignore first 2 lines (version and compiler; python3 has -q for this)
+		if stderr not in ['>>> >>> \n', '>>> ... \n>>> \n']:
+			try:
+				output = stderr.split('\n')[-3]
+			except IndexError:
+				output = ''
+		else:
+			output = stdout.split('\n', 1)[0]
+	elif proc.returncode == 109:
+		output = 'timed out or memory limit exceeded'
+	else:
+		output = 'unknown error'
+	bot.say(target, '%s: %s' % (nick, output[:250]))
+
+def python3(bot, target, nick, command, text):
+	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', chroot_dir, '-E', 'LANG=en_US.UTF-8',
+			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
+			'--cgroup_mem_max', str(50 * MB), '--cgroup_pids_max', '1', '--quiet', '--',
+			'/usr/bin/python3', '-ISqi']
+	proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE, universal_newlines=True)
+	stdout, stderr = proc.communicate(text + '\n')
+	if proc.returncode == 0:
+		if stderr not in ['>>> >>> \n', '>>> ... \n>>> \n']:
+			try:
+				output = stderr.split('\n')[-3]
+			except IndexError:
+				output = ''
+		else:
+			output = stdout.split('\n', 1)[0]
+	elif proc.returncode == 109:
+		output = 'timed out or memory limit exceeded'
+	else:
+		output = 'unknown error'
+	bot.say(target, '%s: %s' % (nick, output[:250]))
+
+def unicode_search(bot, target, nick, command, text):
+	cmd = ['unicode', '--format', '{pchar} U+{ordc:04X} {name} (UTF-8: {utf8})\\n', '--max', '5', '--color', '0', text]
+	output = subprocess.check_output(cmd)
+	split = output.decode('utf-8').split('\n')
+	if len(split) > 8: # text is something like '0000..ffff'
+		return
+	elif len(split) == 1:
+		bot.say(target, '%s: nothing found' % nick)
+	elif split[-2].startswith('Too many characters to display,'):
+		split[-2] = split[-2][:split[-2].rfind(',')]
+	bot.say(target, '    '.join(split))
+
+def ddate(bot, target, nick, command, text):
+	output = subprocess.check_output(['ddate'] + shlex.split(text), universal_newlines=True)
+	bot.say(target, output.replace('\n', '    '))
+
+def units(bot, target, nick, command, text):
+	command = ['units', '--compact', '--one-line', '--quiet'] + text.split(' in ', 1)
+	proc = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True)
+	output, _ = proc.communicate()
+	bot.say(target, output.replace('\n', '  ')[:250])
 
 handlers = {
 	'pc': price_check,
 	'jumps': jumps,
+	'ly': lightyears,
+
 	'reload': reload,
+
 	'calc': calc,
 	'roll': roll,
+
+	'js': nodejs,
+	'ruby': irb,
+	'py2': python2,
+	'py3': python3,
+
+	'unicode': unicode_search,
+	'ddate': ddate,
+	'units': units,
 }
 
-youtube_re = re.compile('((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
+youtube_re = re.compile(r'((youtube\.com\/watch\?\S*v=)|(youtu\.be/))([a-zA-Z0-9-_]+)')
 def youtube(bot, msg):
 	match = youtube_re.search(msg.text)
 	if match is None:
@@ -273,49 +378,23 @@ def youtube(bot, msg):
 	date = video['snippet']['publishedAt'].split('T', 1)[0]
 	bot.say(msg.target, "%s's video: %s, %s, %s" % (msg.nick, title, duration, date))
 
-def python_inline(bot, msg):
-	code = msg.text[4:]
-	bot.say(msg.target, '%s: %s' % (msg.nick, python(code)))
+pastebin_re = re.compile(r'pastebin.com\/(raw\/)?([a-zA-z0-9_]*)')
+def cpypt(bot, msg):
+	match = pastebin_re.search(msg.text)
+	if match is None:
+		return
+	pastebin_id = match.group(2)
+	response = rs.get('https://pastebin.com/raw/%s' % pastebin_id, allow_redirects=False)
+	if response.status_code != 200:
+		bot.say(msg.target, '%s: error repasting %s' % (msg.nick, pastebin_id))
+		return
+	response = rs.post('https://cpy.pt/', data={'paste': response.text, 'ttl': '730', 'raw': 'false'})
+	response.raise_for_status()
+	paste_url = response.text.split(' ', 1)[0]
+	bot.say(msg.target, '%s: %s' % (msg.nick, paste_url))
 
-def python_multiline(bot, msg):
-	lines = bot.scripts[msg.nick]
-	indent = 0
-	for i, line in enumerate(lines):
-		for j, char in enumerate(line):
-			if char != ' ':
-				break
-		if j < indent:
-			lines[i] = '\n' + line
-		indent = i
-	code = '\n'.join(bot.scripts[msg.nick]) + '\n\n'
-	bot.say(msg.target, '%s: %s' % (msg.nick, python(code)))
-
-PATH = os.environ['PATH']
-username = os.getlogin()
-PATH = ':'.join(filter(lambda p: username not in p, PATH.split(':'))) # filter out virtualenv
-def python(code):
-	pypy = subprocess.Popen(['pypy-sandbox'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-			stderr=subprocess.PIPE, env={'PATH': PATH}, universal_newlines=True, preexec_fn=os.setpgrp)
-	try:
-		stdout, stderr = pypy.communicate(code, 5)
-	except subprocess.TimeoutExpired:
-		os.killpg(pypy.pid, signal.SIGKILL)
-		return 'timed out after 5 seconds'
-	errlines = stderr.split('\n')
-	if len(errlines) > 3:
-		for i in range(1, len(errlines)):
-			line = errlines[-i] # iterate backwards
-			if line:
-				return line[:250]
-	else:
-		for line in stdout.split('\n'):
-			if line.startswith('>>>> '):
-				while line[:5] in ['>>>> ', '.... ']:
-					line = line[5:]
-				return line[:250]
-
-last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
-last_whelp_time = time.time()
+#last_kill_id = rs.get('http://api.whelp.gg/last').json()['kill_id']
+#last_whelp_time = time.time()
 def whelp(bots):
 	from bot import STATE
 	import traceback

@@ -16,7 +16,7 @@ def daemonize():
 		print('backgrounding, pid: %d' % pid)
 		sys.exit(0)
 
-	dev_null = open('/dev/null','w')
+	dev_null = open('/dev/null', 'w')
 	os.dup2(dev_null.fileno(), sys.stdin.fileno())
 	os.dup2(dev_null.fileno(), sys.stdout.fileno())
 	os.dup2(dev_null.fileno(), sys.stderr.fileno())
