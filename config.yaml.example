@@ -1,6 +1,7 @@
 bots:
   - host: irc.freenode.net
     port: 6667
+    use_ssl: true
     nick: pbot
     user: pbot
     nickserv: null # password to identify to NickServ with, null otherwise
@@ -10,6 +11,7 @@ bots:
 settings:
     owner: 'raylu'
     autoreload: false # automatically reload commands.py when it changes?
-    eve_dsn: 'dbname=eve user=eve'
-
+    weather_key: 9fe8178f6b546acb # https://www.wunderground.com/weather/api/
+    youtube_key: none
+    
 # vim: set et ft=yaml:
