@@ -11,7 +11,6 @@ import connection
 import log
 import commands
 
-os.stat_float_times(False)
 commands_mtime = os.stat('commands.py').st_mtime
 
 class BotStates:
