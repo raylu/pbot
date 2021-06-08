@@ -220,7 +220,8 @@ chroot_dir = path.join(path.dirname(path.abspath(__file__)), 'chroot')
 MB = 1024 * 1024
 
 def nodejs(bot, target, nick, command, text):
-	cmd = ['../nsjail/nsjail', '-Mo', '--rlimit_as', '700', '--chroot', chroot_dir,
+	cmd = ['../nsjail/nsjail', '--use_cgroupv2', '--cgroupv2_mount', '/sys/fs/cgroup/NSJAIL', '-Mo',
+			'--rlimit_as', '700', '--chroot', chroot_dir,
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
 			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
 			'--cgroup_mem_max', str(50 * MB), '--cgroup_pids_max', '6', '--quiet', '--',
@@ -248,8 +249,8 @@ def nodejs(bot, target, nick, command, text):
 	bot.say(target, '%s: %s' % (nick, output[:250]))
 
 def irb(bot, target, nick, command, text):
-	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', '',
-			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
+	cmd = ['../nsjail/nsjail', '--use_cgroupv2', '--cgroupv2_mount', '/sys/fs/cgroup/NSJAIL', '-Mo',
+			'--chroot', '', '-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
 			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
 			'--cgroup_mem_max', str(50 * MB), '--cgroup_pids_max', '1', '--quiet', '--',
 			'/usr/bin/irb', '-f', '--noprompt']
@@ -266,7 +267,8 @@ def irb(bot, target, nick, command, text):
 	bot.say(target, '%s: %s' % (nick, output))
 
 def python2(bot, target, nick, command, text):
-	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', chroot_dir, '-E', 'LANG=en_US.UTF-8',
+	cmd = ['../nsjail/nsjail', '--use_cgroupv2', '--cgroupv2_mount', '/sys/fs/cgroup/NSJAIL', '-Mo',
+			'--chroot', chroot_dir, '-E', 'LANG=en_US.UTF-8',
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
 			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
 			'--cgroup_mem_max', str(50 * MB), '--cgroup_pids_max', '1', '--quiet', '--',
@@ -290,7 +292,8 @@ def python2(bot, target, nick, command, text):
 	bot.say(target, '%s: %s' % (nick, output[:250]))
 
 def python3(bot, target, nick, command, text):
-	cmd = ['../nsjail/nsjail', '-Mo', '--chroot', chroot_dir, '-E', 'LANG=en_US.UTF-8',
+	cmd = ['../nsjail/nsjail', '--use_cgroupv2', '--cgroupv2_mount', '/sys/fs/cgroup/NSJAIL', '-Mo',
+			'--chroot', chroot_dir, '-E', 'LANG=en_US.UTF-8',
 			'-R/usr', '-R/lib', '-R/lib64', '--user', 'nobody', '--group', 'nogroup',
 			'--time_limit', '2', '--disable_proc', '--iface_no_lo',
 			'--cgroup_mem_max', str(50 * MB), '--cgroup_pids_max', '1', '--quiet', '--',
