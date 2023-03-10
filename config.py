@@ -23,7 +23,7 @@ class BotConfig:
 		return '<BotConfig: %s>' % self.__dict__
 
 with open('config.yaml', 'r') as f:
-	__doc = yaml.load(f)
+	__doc = yaml.safe_load(f)
 bots = (BotConfig(c) for c in __doc['bots'])
 settings = __doc['settings']
 

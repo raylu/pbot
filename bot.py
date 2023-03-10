@@ -233,7 +233,7 @@ class Bot:
 				if handler:
 					handler(self, msg.target, msg.nick, command, text)
 			else:
-				commands.youtube(self, msg)
+				#commands.youtube(self, msg)
 				commands.cpypt(self, msg)
 
 	def handle_ctcp(self, msg):
