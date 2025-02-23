@@ -1,5 +1,5 @@
 from collections import defaultdict
-import imp
+import importlib
 import os
 import socket
 import sys
@@ -227,7 +227,7 @@ class Bot:
 					global commands_mtime
 					new_mtime = os.stat('commands.py').st_mtime
 					if new_mtime > commands_mtime:
-						imp.reload(commands)
+						importlib.reload(commands)
 						commands_mtime = new_mtime
 				handler = commands.handlers.get(command)
 				if handler:
